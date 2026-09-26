@@ -1,0 +1,12 @@
+/*  The house look. The engine re-exports the primitives, but a bundler drops
+    a stylesheet imported by a module it treats as side-effect-free, so the
+    game names it. */
+@import "@spawnite/ui/styles.css";
+
+/*  A game restyles the house palette by overriding its tokens, listed in
+    ui's stylesheet, on :root. Not in @theme: this file is not a Tailwind
+    root, so an @theme here reaches the browser unread. This one turns the
+    health fill sky blue. */
+:root {
+    --color-health-fill: oklch(74.6% 0.16 232.661);
+}
