@@ -1,0 +1,181 @@
+/*  The house look. The engine re-exports the primitives, but a bundler drops
+    a stylesheet imported by a module it treats as side-effect-free, so the
+    game names it. */
+@import "@spawnite/ui/styles.css";
+
+/*  The HUD's display face, for numbers and titles: a condensed heavy system
+    face, so nothing is downloaded. Bahnschrift ships with Windows, Avenir
+    Next Condensed and DIN Condensed with Apple's systems, Roboto Condensed
+    with Android. */
+@theme {
+    --font-display:
+        "Bahnschrift SemiBold Condensed", "Bahnschrift",
+        "Avenir Next Condensed", "DIN Condensed", "Roboto Condensed",
+        "Arial Narrow", sans-serif;
+
+    --animate-hud-slam: hud-slam 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    --animate-hud-rise: hud-rise 360ms ease-out both;
+    --animate-hud-flash: hud-flash 450ms ease-out both;
+    --animate-hud-pulse: hud-pulse 900ms ease-in-out infinite;
+    --animate-hud-sweep: hud-sweep 700ms ease-out both;
+    --animate-hit-mark: hit-mark 150ms ease-out both;
+    --animate-kill-mark: kill-mark 240ms ease-out both;
+    --animate-kill-ring: kill-ring 240ms ease-out both;
+    --animate-damage-pop: damage-pop 750ms ease-out both;
+
+    /*  The crosshair's mark for a hit: out a little, then gone in about a
+        seventh of a second, as shooters keep theirs. */
+    @keyframes hit-mark {
+        0% {
+            opacity: 1;
+            transform: scale(1.25);
+        }
+        35% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1);
+        }
+    }
+
+    /*  The mark for a kill: it lands larger and holds a beat longer, a
+        quarter of a second in all. */
+    @keyframes kill-mark {
+        0% {
+            opacity: 1;
+            transform: scale(1.5);
+        }
+        35% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1);
+        }
+    }
+
+    /*  The ring round a kill, opening out as it fades. */
+    @keyframes kill-ring {
+        0% {
+            opacity: 0.9;
+            transform: scale(0.6);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1.35);
+        }
+    }
+
+    /*  A damage number: it pops, floats up and fades. */
+    @keyframes damage-pop {
+        0% {
+            opacity: 0;
+            transform: translateY(0) scale(0.6);
+        }
+        15% {
+            opacity: 1;
+            transform: translateY(-10px) scale(1.25);
+        }
+        60% {
+            opacity: 1;
+            transform: translateY(-26px) scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-44px) scale(0.9);
+        }
+    }
+
+    /*  A title arriving: from large and faint to its size, past it and back. */
+    @keyframes hud-slam {
+        0% {
+            opacity: 0;
+            transform: scale(1.6);
+            filter: blur(6px);
+        }
+        60% {
+            opacity: 1;
+            filter: blur(0);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    /*  A line or a card arriving from just below. */
+    @keyframes hud-rise {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    /*  A hit: the pane lights red and fades. */
+    @keyframes hud-flash {
+        from {
+            opacity: 0.85;
+        }
+        to {
+            opacity: 0;
+        }
+    }
+    /*  Low health: the number throbs. */
+    @keyframes hud-pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.55;
+        }
+    }
+    /*  The rule under a title drawing out from its middle. */
+    @keyframes hud-sweep {
+        from {
+            transform: scaleX(0);
+        }
+        to {
+            transform: scaleX(1);
+        }
+    }
+}
+
+/*  The end screen draws its own pane inside the engine's modal, so the
+    modal's glass pane and its small heading step back. Unlayered, so it
+    outranks the utilities the modal carries. The heading stays the dialog's
+    accessible name through its label. */
+dialog:has(.run-over-pane) > div {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+}
+dialog:has(.run-over-pane) > div > h2 {
+    display: none;
+}
+dialog:has(.run-over-pane)::backdrop {
+    background: radial-gradient(
+        ellipse at center,
+        rgb(20 10 18 / 55%),
+        rgb(8 4 10 / 88%)
+    );
+}
+
+/*  The engine's menus and the performance overlay in this HUD's colours:
+    the dusk slate pane, the warm hairline and the amber the HUD lights
+    with. Unlayered, so it outranks ui's defaults on the same variables. */
+:root {
+    --color-menu-surface: rgb(2 6 23 / 88%);
+    --color-menu-raised: rgb(254 243 199 / 7%);
+    --color-menu-edge: rgb(253 230 138 / 20%);
+    --color-menu-muted: rgb(254 243 199 / 60%);
+    --color-menu-accent: var(--color-amber-300);
+    --color-menu-accent-ink: var(--color-slate-950);
+}

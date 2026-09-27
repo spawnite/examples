@@ -1,0 +1,76 @@
+{
+    "seed": 139,
+    "size": 100,
+    "cell": 1,
+    "hills": {
+        "amplitude": 6,
+        "wavelength": 40,
+        "detail": 0
+    },
+    "scatter": {
+        "treeRound": 0.4,
+        "treeTall": 0.4,
+        "bushRound": 0.8,
+        "rockBoulder": 0.3,
+        "rockFlat": 0.3,
+        "grassTuft": 1,
+        "seedOffset": 0
+    },
+    "regions": {
+        "meadow": {
+            "center": [0, 0],
+            "radius": 20,
+            "fade": 12,
+            "hills": {
+                "amplitude": 0,
+                "wavelength": 40,
+                "detail": 0
+            },
+            "scatter": {
+                "treeRound": 0.15,
+                "treeTall": 0.15,
+                "bushRound": 0.5,
+                "rockBoulder": 0.05,
+                "rockFlat": 0.05,
+                "grassTuft": 1,
+                "seedOffset": 1,
+                "clearing": 8
+            }
+        },
+        "rollingField": {
+            "center": [35, -35],
+            "radius": 25,
+            "fade": 15,
+            "hills": {
+                "amplitude": 12,
+                "wavelength": 25,
+                "detail": 0.35
+            },
+            "scatter": {
+                "treeRound": 0.5,
+                "treeTall": 0.5,
+                "bushRound": 1,
+                "rockBoulder": 0.5,
+                "rockFlat": 0.5,
+                "grassTuft": 1,
+                "seedOffset": 2,
+                "clearing": 0
+            }
+        }
+    },
+    "paths": {
+        "meadowToRollingField": {
+            "halfWidth": 1.6,
+            "fade": 2,
+            "points": [
+                [0, 0],
+                [12, -10],
+                [25, -25],
+                [40, -40]
+            ]
+        }
+    },
+    "views": {},
+    "props": {},
+    "rim": 8
+}

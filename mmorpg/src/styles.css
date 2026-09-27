@@ -1,0 +1,6 @@
+@import "@spawnite/ui/styles.css";
+
+/*  Tailwind finds classes only under this app's own folder, and the packages
+    that draw the HUD sit outside it. */
+@source "../../../packages/ui/src";
+@source "../../../packages/engine/src";

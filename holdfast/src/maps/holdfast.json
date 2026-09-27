@@ -1,0 +1,125 @@
+{
+    "seed": 2711,
+    "size": 100,
+    "cell": 1,
+    "hills": {
+        "amplitude": 9,
+        "wavelength": 26,
+        "detail": 0.45
+    },
+    "scatter": {
+        "treeRound": 0.4,
+        "treeTall": 0.3,
+        "bushRound": 0.9,
+        "rockBoulder": 0.6,
+        "rockFlat": 0.5,
+        "grassTuft": 1,
+        "seedOffset": 0
+    },
+    "regions": {
+        "circle": {
+            "center": [0, 0],
+            "radius": 32,
+            "fade": 5,
+            "hills": {
+                "amplitude": 0.5,
+                "wavelength": 18,
+                "detail": 0
+            },
+            "scatter": {
+                "treeRound": 0,
+                "treeTall": 0,
+                "bushRound": 0.04,
+                "rockBoulder": 0,
+                "rockFlat": 0,
+                "grassTuft": 0.6,
+                "seedOffset": 1,
+                "clearing": 5.5
+            }
+        }
+    },
+    "paths": {
+        "ring": {
+            "halfWidth": 1.3,
+            "fade": 1,
+            "points": [
+                [0.0, 14.0],
+                [5.36, 12.93],
+                [9.9, 9.9],
+                [12.93, 5.36],
+                [14.0, 0.0],
+                [12.93, -5.36],
+                [9.9, -9.9],
+                [5.36, -12.93],
+                [0.0, -14.0],
+                [-5.36, -12.93],
+                [-9.9, -9.9],
+                [-12.93, -5.36],
+                [-14.0, -0.0],
+                [-12.93, 5.36],
+                [-9.9, 9.9],
+                [-5.36, 12.93],
+                [-0.0, 14.0]
+            ],
+            "surface": "stone"
+        },
+        "northRoad": {
+            "halfWidth": 1.6,
+            "fade": 1.5,
+            "points": [
+                [0, -15],
+                [1, -26],
+                [-1, -34],
+                [0, -41]
+            ],
+            "surface": "dirt"
+        },
+        "southRoad": {
+            "halfWidth": 1.6,
+            "fade": 1.5,
+            "points": [
+                [0, 15],
+                [-1, 26],
+                [1, 34],
+                [0, 41]
+            ],
+            "surface": "dirt"
+        },
+        "eastRoad": {
+            "halfWidth": 1.6,
+            "fade": 1.5,
+            "points": [
+                [15, 0],
+                [26, 1],
+                [34, -1],
+                [41, 0]
+            ],
+            "surface": "dirt"
+        },
+        "westRoad": {
+            "halfWidth": 1.6,
+            "fade": 1.5,
+            "points": [
+                [-15, 0],
+                [-26, -1],
+                [-34, 1],
+                [-41, 0]
+            ],
+            "surface": "dirt"
+        }
+    },
+    "views": {
+        "overview": {
+            "eye": [26, 30, 26],
+            "target": [0, 0, 0],
+            "fov": 50
+        },
+        "circle": {
+            "eye": [0, 7, 22],
+            "target": [0, 1, 0],
+            "fov": 55
+        }
+    },
+    "props": {},
+    "rim": 8
+}

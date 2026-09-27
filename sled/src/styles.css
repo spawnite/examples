@@ -1,0 +1,4 @@
+/*  The house look. The engine re-exports the primitives, but a bundler drops
+    a stylesheet imported by a module it treats as side-effect-free, so the
+    game names it. */
+@import "@spawnite/ui/styles.css";

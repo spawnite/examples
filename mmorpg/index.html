@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>three-mmorpg</title>
+        <!--  Linked rather than imported by the entry module, so the page holds
+            its first paint for it in development as a build does, and the
+            field below is dark from that frame rather than white. -->
+        <link rel="stylesheet" href="/src/styles.css" />
+    </head>
+
+    <!--  The loading screen's own field, held by the page for the moment
+        before React paints that screen over it. The palette's loading
+        background, written out because HTML cannot import it. -->
+    <body class="bg-neutral-950">
+        <div id="root"></div>
+        <script type="module" src="/src/main.tsx"></script>
+    </body>
+</html>

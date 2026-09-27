@@ -1,0 +1,124 @@
+{
+    "questions": {
+        "inPath": {
+            "type": "boolean",
+            "instructions": "This is a game's AI tree: a JSON list of nodes, the player first, each with what it is, its facts and its actions. Is something in the player's path and about to reach them?",
+            "criteria": {
+                "true": "A node after the first whose facts include \"in your path\" and also \"reaching you now\" or \"right in front of you\".",
+                "false": "Every node in the player's path is only just ahead, further ahead, far ahead or behind; or every node reaching the player now or right in front of them is to their left or right, or above or below them, which a player passes over or under."
+            }
+        },
+        "canJump": {
+            "type": "boolean",
+            "instructions": "This is a game's AI tree: a JSON list of nodes, the player first, each with what it is, its facts and its actions. Can the player jump right now?",
+            "criteria": {
+                "true": "The first node, the player's own, lists \"jump\" among its actions.",
+                "false": "The first node's actions hold no \"jump\", such as steering only while the player is in the air; a \"jump it\" on a later node does not count."
+            }
+        }
+    },
+    "thresholds": {
+        "inPath": 0.5,
+        "canJump": 0.5
+    },
+    "cases": [
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"right in front of you\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"far ahead\", \"to your left, close\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"reaching you now\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your left, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your left, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"further ahead\", \"in your path\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"far ahead\", \"to your left, well clear\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}]",
+            "expected": {
+                "inPath": true,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"reaching you now\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"further ahead\", \"in your path\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"far ahead\", \"in your path\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"reaching you now\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"further ahead\", \"in your path\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"far ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"far ahead\", \"to your left, close\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"reaching you now\", \"in your path\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"further ahead\", \"to your left, close\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": true,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"right of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"reaching you now\", \"to your left, close\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your left, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"further ahead\", \"to your left, well clear\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"left of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"reaching you now\", \"to your right, close\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your right, well clear\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"further ahead\", \"in your path\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"reaching you now\", \"in your path\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"further ahead\", \"to your left, close\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": true,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"in the air\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\"]}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"reaching you now\", \"below you\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"below you\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"below you\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"further ahead\", \"below you\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"further ahead\", \"to your left, close\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"far ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": false,
+                "canJump": false
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\", \"stunned\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"right in front of you\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"just ahead\", \"to your right, close\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"further ahead\", \"to your left, close\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"further ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"behind you\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"reaching you now\", \"in your path\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"just ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"behind you\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": true,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"reaching you now\", \"to your left, well clear\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"just ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"behind you\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": false,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"reaching you now\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"right in front of you\", \"in your path\"], \"actions\": [\"collect it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"just ahead\", \"to your left, well clear\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"further ahead\", \"in your path\"], \"actions\": []}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"behind you\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": true,
+                "canJump": true
+            }
+        },
+        {
+            "state": "[{\"id\": \"4\", \"is\": \"you\", \"facts\": [\"on the ground\", \"in the middle of the lane\"], \"actions\": [\"steer left\", \"steer right\", \"jump\"]}, {\"id\": \"14\", \"is\": \"the finish line\", \"facts\": [\"reaching you now\", \"in your path\"], \"actions\": []}, {\"id\": \"5\", \"is\": \"a slab across the lane\", \"facts\": [\"behind you\"], \"actions\": [\"jump it\", \"go round it\"]}, {\"id\": \"6\", \"is\": \"a boulder\", \"facts\": [\"behind you\", \"ends the run on a touch\"], \"actions\": [\"go round it\"]}, {\"id\": \"7\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"8\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"9\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"10\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"11\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"12\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}, {\"id\": \"13\", \"is\": \"a coin\", \"facts\": [\"behind you\"], \"actions\": [\"collect it\"]}]",
+            "expected": {
+                "inPath": true,
+                "canJump": true
+            }
+        }
+    ]
+}
