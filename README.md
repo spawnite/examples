@@ -2,7 +2,7 @@
 
 Spawnite is a game platform built for coding agents. Your agent writes the game in TypeScript and React on the Spawnite engine, then runs it headless, steps it, screenshots it and tests it from the command line, with no browser window. You publish the game to players on the web, the phone and the desktop. Multiplayer is built in: a game with more than one player runs in a server-authoritative room, and a single-player game needs none.
 
-This repository holds projects you can copy: the example game, and each template the scaffold tools write. Every release of the `@spawnite` packages regenerates them, so they match the packages you install.
+This repository holds the platform's games as projects you can copy, one folder each. Every release of the `@spawnite` packages writes them again, so they match the packages you install. The files `game add` writes, one folder per template, are in [spawnite/templates](https://github.com/spawnite/templates).
 
 ## Install
 
@@ -27,21 +27,19 @@ The engine needs React, React Three Fiber and a few other peers beside it. [Inst
 
 ## What this repository holds
 
-Each folder is exactly what a command of the `game` CLI writes:
+Each folder is what `game create my-game --template <folder>` writes:
 
-| Folder                | What it holds                                             | Written by                               |
-| --------------------- | --------------------------------------------------------- | ---------------------------------------- |
-| `games/example`       | The example game: a lobby, then a run through three coins | `game create my-game --template example` |
-| `templates/behaviour` | A behaviour and its wiki page stub                        | `game add behaviour`                     |
-| `templates/entity`    | An entity and its wiki page stub                          | `game add entity`                        |
-| `templates/scene`     | A scene and its wiki page stub                            | `game add scene`                         |
-| `templates/panel`     | A devtools panel and its wiki page stub                   | `game add panel`                         |
-| `templates/shader`    | A shader material and its wiki page stub                  | `game add shader`                        |
-| `templates/map`       | A blank map                                               | `game add map feature`                   |
+| Folder     | What it holds                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------ |
+| `example`  | A lobby, then a run through three coins to a goal ring                                                 |
+| `sled`     | A sled launched from a slingshot, down a snowy track to the finish gate                                |
+| `mmorpg`   | An avatar in an open meadow, with a bag of items and a save                                            |
+| `arena`    | Players in one room, monsters that chase them and coins to race for                                    |
+| `holdfast` | Co-op wave survival: hold the stone circle against the Hollow, one wave and one upgrade card at a time |
 
-The templates keep `Feature` as their placeholder. Inside your project, `pnpm exec game add entity Crate` writes the entity with `Feature` renamed to `Crate`, and `feature` to `crate`.
+`sled`, `mmorpg`, `arena` and `holdfast` also import files from the platform's asset kit, which is not on npm, so `game create` refuses them: read and copy from them rather than install them. `arena` and `holdfast` play in a room, which runs only on Spawnite.
 
-Each release replaces `games/` and `templates/` whole, so a change made to them here does not last.
+Each release replaces every folder here whole, so a change made to them in this repository does not last.
 
 ## Links
 
@@ -51,3 +49,5 @@ Each release replaces `games/` and `templates/` whole, so a change made to them 
 ## License
 
 The code in this repository is MIT, as [LICENSE](LICENSE) says: copy it, change it and ship it. The `@spawnite` packages that the projects install from npm have a licence of their own: PolyForm Shield 1.0.0, with two added permissions.
+
+The files under each game's `public/assets` are outside that grant. Each keeps its own licence, which `packages/assets/SOURCES.md` in the Spawnite engine's repository, daniel-zarinski/game-platform, records; daniel-zarinski/game-platform#1663 fills the rows it is missing.
