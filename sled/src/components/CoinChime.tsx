@@ -1,6 +1,6 @@
 import { useTrait } from "koota/react";
 import { Sound, useEntity, Wallet } from "@spawnite/engine";
-import coin from "@spawnite/assets/sounds/sled/sled-coin.mp3?url";
+import coin from "@game/assets/sounds/sled/coin.mp3?url";
 
 /** The coin sound, once for each coin the rider's wallet gains.
  *  ponytail: one pitch; the old sled stepped it up a semitone a coin, to

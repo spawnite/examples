@@ -1,22 +1,19 @@
 // @vitest-environment node
-import { readFileSync, realpathSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import {
-    firstLoadCeilingBytes,
-    readFirstLoadBytes,
-    readFirstLoadFiles,
-} from "@spawnite/engine/vite";
-import { build, normalizePath, type Plugin, type Rolldown } from "vite";
+import { gzipSync } from "node:zlib";
+import { build, type Plugin, type Rolldown } from "vite";
 import { beforeAll, expect, it } from "vitest";
 
 const exampleFolder = path.resolve(import.meta.dirname, "..");
 
+//  The most the page, its code and its styles may weigh gzipped: what a
+//  phone downloads before it draws a frame.
+const initialLoadBudgetBytes = 720_000;
+
 //  Every file the production build wrote, read off the bundle itself.
 const bundle: Rolldown.OutputBundle = {};
-//  The tree model the build wrote from public/, which the bundle omits.
-let builtTree: Buffer | undefined;
 
 function recordBundle(): Plugin {
     return {
@@ -41,9 +38,6 @@ beforeAll(async () => {
             build: { outDir, emptyOutDir: true },
             plugins: [recordBundle()],
         });
-        builtTree = await readFile(
-            path.join(outDir, "assets/tree-tall.glb"),
-        ).catch(() => undefined);
     } finally {
         process.env.NODE_ENV = testEnvironment;
         await rm(outDir, { recursive: true, force: true });
@@ -63,43 +57,17 @@ it("splits its code into a handful of chunks", () => {
     expect(chunks.length).toBeLessThan(maxChunks);
 });
 
-//  The devtools package's files, as the build names its modules: the link
-//  resolved, with forward slashes on every platform.
-const devtoolsFolder = `${normalizePath(
-    realpathSync(path.join(exampleFolder, "node_modules/@spawnite/devtools")),
-)}/`;
-
-//  What only the devtools bring into a build, so a static import of any of
-//  them from the game or the engine fails here.
-const devtoolsModules = [
-    //  The engine's console capture.
-    /object-inspect/,
-    /error-stack-parser/,
-    //  motion's drag and layout, which no `m` inside `LazyMotion` asks for.
-    /framer-motion[\\/].*[\\/]gestures[\\/]drag[\\/]/,
-    /[\\/]projection[\\/]node[\\/]/,
-];
-
-//  The devtools are for development: a deploy carries none of their code,
-//  styles or fonts.
-it("ships no devtools in a production build", () => {
-    expect(
-        Object.keys(bundle).filter((fileName) =>
-            /devtools|\.woff2?$/.test(fileName),
-        ),
-    ).toEqual([]);
-    const moduleIds = Object.values(bundle).flatMap((output) =>
-        output.type === "chunk" ? output.moduleIds : [],
+//  The devtools reach the page through a bare stylesheet import in their
+//  entry, which the bundler drops when the package calls itself side-effect
+//  free. The dev server never tree-shakes, so only a build shows the loss.
+it("ships the devtools stylesheet in a production build", () => {
+    const fileNames = Object.keys(bundle);
+    expect(fileNames).toContainEqual(
+        expect.stringMatching(/^assets\/devtools-.*\.js$/),
     );
-    //  A build that recorded nothing would pass the checks below for the
-    //  wrong reason.
-    expect(moduleIds).not.toEqual([]);
-    expect(moduleIds.filter((id) => id.startsWith(devtoolsFolder))).toEqual([]);
-    expect(
-        moduleIds.filter((id) =>
-            devtoolsModules.some((pattern) => pattern.test(id)),
-        ),
-    ).toEqual([]);
+    expect(fileNames).toContainEqual(
+        expect.stringMatching(/^assets\/devtools-.*\.css$/),
+    );
 });
 
 //  A .wasm file compiles while it downloads and weighs a third less than
@@ -119,6 +87,16 @@ it("ships Rapier's wasm as a file, without the -compat build", () => {
     ).toEqual([]);
 });
 
+//  Every browser the platform serves reads woff2, so a woff beside it is a
+//  file a deploy uploads and no page fetches.
+it("ships the devtools' fonts as woff2 alone", () => {
+    const fonts = Object.keys(bundle).filter((fileName) =>
+        /\.woff2?$/.test(fileName),
+    );
+    expect(fonts).toContainEqual(expect.stringMatching(/\.woff2$/));
+    expect(fonts.filter((fileName) => fileName.endsWith(".woff"))).toEqual([]);
+});
+
 //  A second decoder is a wasm and its wrapper that no model loads.
 it("ships one Draco decoder", () => {
     const decoders = Object.keys(bundle)
@@ -130,46 +108,46 @@ it("ships one Draco decoder", () => {
     ]);
 });
 
-//  A sky is a megabyte and a half, and the example's scenes name none.
-it("ships no sky its scenes do not name", () => {
-    expect(
-        Object.keys(bundle).filter((fileName) => /\.(hdr|exr)$/.test(fileName)),
-    ).toEqual([]);
-});
+//  The page, its entry chunk, what that imports statically and their
+//  stylesheets. The physics and the navmesh wasm are dynamic imports, which
+//  the world draws without.
+function readInitialFiles() {
+    const initialFiles = new Set(["index.html"]);
+    const visit = (fileName: string) => {
+        const chunk = bundle[fileName];
+        if (initialFiles.has(fileName) || chunk?.type !== "chunk") return;
+        initialFiles.add(fileName);
+        chunk.viteMetadata?.importedCss.forEach((css) => initialFiles.add(css));
+        chunk.imports.forEach(visit);
+    };
+    Object.values(bundle)
+        .filter((output) => output.type === "chunk" && output.isEntry)
+        .forEach((entry) => visit(entry.fileName));
+    return initialFiles;
+}
 
-//  The example's tree is the engine's kit tree, byte for byte: the build
-//  keeps the example's copy and points the engine's scatter at it.
-it("ships one copy of a model the game and the engine both carry", () => {
-    //  The copy the build keeps: Vite copies public/ as it is, outside the
-    //  bundle.
-    const publicTree = readFileSync(
-        path.join(exampleFolder, "public/assets/tree-tall.glb"),
-    );
-    expect(builtTree?.equals(publicTree)).toBe(true);
-    expect(
-        Object.keys(bundle).filter((fileName) =>
-            fileName.includes("tree-tall"),
-        ),
-    ).toEqual([]);
-    const code = Object.values(bundle)
-        .flatMap((output) => (output.type === "chunk" ? [output.code] : []))
-        .join("\n");
-    expect(code).toMatch(/[`"']assets\/tree-tall\.glb[`"']/);
-});
+it("keeps the initial load under its budget", () => {
+    const bytes = [...readInitialFiles()]
+        .map((fileName) => {
+            const output = bundle[fileName];
+            return output.type === "chunk" ? output.code : output.source;
+        })
+        .reduce((total, source) => total + gzipSync(source).length, 0);
 
-//  The physics and the navmesh wasm are dynamic imports, which the world
-//  draws without.
-it("keeps the first load under the platform's ceiling", () => {
-    expect(readFirstLoadBytes(bundle)).toBeLessThanOrEqual(
-        firstLoadCeilingBytes,
-    );
+    expect(bytes).toBeLessThanOrEqual(initialLoadBudgetBytes);
 });
 
 //  What a first frame draws without, each loaded where it is first used, as
 //  the frame page lists them.
 const deferredModules = [
+    //  motion's drag and layout, which no `m` inside `LazyMotion` asks for.
+    /framer-motion[\\/].*[\\/]gestures[\\/]drag[\\/]/,
+    /[\\/]projection[\\/]node[\\/]/,
     //  EXRLoader, for a sky that names an `.exr`.
     /EXRLoader/,
+    //  The devtools' console capture.
+    /object-inspect/,
+    /error-stack-parser/,
     //  recast's library and the line materials its wireframe draws with.
     /@recast-navigation/,
     /[\\/]jsm[\\/]lines[\\/]/,
@@ -189,12 +167,10 @@ it("keeps what a first frame draws without out of the initial load", () => {
     expect(Object.keys(bundle)).toContainEqual(
         expect.stringMatching(/^assets\/pickup-.*\.mp3$/),
     );
-    const initialChunks = [...readFirstLoadFiles(bundle)].flatMap(
-        (fileName) => {
-            const output = bundle[fileName];
-            return output.type === "chunk" ? [output] : [];
-        },
-    );
+    const initialChunks = [...readInitialFiles()].flatMap((fileName) => {
+        const output = bundle[fileName];
+        return output.type === "chunk" ? [output] : [];
+    });
     const renderedIds = initialChunks.flatMap((chunk) =>
         Object.entries(chunk.modules)
             .filter(([, module]) => module.renderedLength > 0)

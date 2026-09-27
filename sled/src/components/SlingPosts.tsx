@@ -9,7 +9,7 @@ import {
     type InstancePlacement,
     type Track,
 } from "@spawnite/engine";
-import post from "@spawnite/assets/models/sled/sling-post-wood.glb?url";
+import post from "@game/assets/models/sled/sling-post-wood.glb?url";
 import { palette } from "../palette";
 import { spawnDistance } from "../ride/rider";
 import { pullMaximum, SlingTrait } from "../ride/sling";

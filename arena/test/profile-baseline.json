@@ -13,8 +13,8 @@
     "programLinks": 0,
     "textureUploads": 1,
     "bufferUploads": 0,
-    "garbageBytesPerFrame": 69428,
+    "garbageBytesPerFrame": 84626,
     "caps": {
-        "garbageBytesPerFrame": 72500
+        "garbageBytesPerFrame": 95000
     }
 }

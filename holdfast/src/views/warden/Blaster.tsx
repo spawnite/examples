@@ -1,4 +1,4 @@
-import blasterModel from "@spawnite/assets/models/holdfast/blaster.glb?url";
+import blasterModel from "@game/assets/models/holdfast/blaster.glb?url";
 import { Gltf, useGLTF } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";

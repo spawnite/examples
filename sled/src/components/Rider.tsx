@@ -10,10 +10,9 @@ import {
     TrackMover,
     useBehaviour,
     useEntity,
-    useHeadless,
     type Track,
 } from "@spawnite/engine";
-import penguin from "@spawnite/assets/models/sled/penguin.glb?url";
+import penguin from "@game/assets/models/sled/penguin.glb?url";
 import { readRiderVisible, RunBehaviour, RunTrait } from "../ride/course";
 import { LeanBehaviour, LeanTrait } from "../ride/lean";
 import {
@@ -48,8 +47,6 @@ function Run() {
 function RiderLook() {
     const entity = useEntity();
     const lookRef = useRef<Group>(null);
-    //  Headless there is no page to draw it on, so no model loads.
-    const headless = useHeadless();
     useFrame(() => {
         const look = lookRef.current;
         if (!look) return;
@@ -69,7 +66,7 @@ function RiderLook() {
                     rotation-y={Math.PI / 2}
                     scale={riderScale}
                 >
-                    {!headless && <Penguin />}
+                    <Penguin />
                 </group>
             </Suspense>
         </group>

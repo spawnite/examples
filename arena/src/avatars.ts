@@ -1,4 +1,4 @@
-import fris from "@spawnite/assets/avatars/fris.vrm?url";
+import fris from "@game/assets/avatars/fris.vrm?url";
 import { registerAvatar, type VrmBody } from "@spawnite/engine";
 
 //  The body every heroine wears, under the name the room streams. The scene
@@ -17,24 +17,6 @@ export const heroineBody = {
         radii: { upperArm: 0.06, lowerArm: 0.055, hand: 0.045 },
         bonePrefix: "Skirt_",
     },
-    springColliderBones: [
-        "head",
-        "neck",
-        "chest",
-        "hips",
-        "leftUpperArm",
-        "leftLowerArm",
-        "leftHand",
-        "rightUpperArm",
-        "rightLowerArm",
-        "rightHand",
-        "leftUpperLeg",
-        "leftLowerLeg",
-        "leftFoot",
-        "rightUpperLeg",
-        "rightLowerLeg",
-        "rightFoot",
-    ],
 } satisfies VrmBody;
 
 registerAvatar(heroineAvatar, heroineBody);

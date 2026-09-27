@@ -3,176 +3,146 @@
     game names it. */
 @import "@spawnite/ui/styles.css";
 
-/*  Tailwind's layer order, named here because this sheet can load before
-    ui's: a layer first named below would otherwise rank under preflight. */
-@layer properties, theme, base, components, utilities;
-
-/*  This file is not a Tailwind root: the build ships it as written, so an
-    @theme here reaches the browser as an at-rule it drops, with all it
-    holds. The theme's values are plain CSS instead. */
-
-/*  The HUD's display face, for numbers and titles, read by ui's
-    font-display: a condensed heavy system face, so nothing is downloaded.
-    Bahnschrift ships with Windows, Avenir Next Condensed and DIN Condensed
-    with Apple's systems, Roboto Condensed with Android. */
-:root {
+/*  The HUD's display face, for numbers and titles: a condensed heavy system
+    face, so nothing is downloaded. Bahnschrift ships with Windows, Avenir
+    Next Condensed and DIN Condensed with Apple's systems, Roboto Condensed
+    with Android. */
+@theme {
     --font-display:
         "Bahnschrift SemiBold Condensed", "Bahnschrift",
         "Avenir Next Condensed", "DIN Condensed", "Roboto Condensed",
         "Arial Narrow", sans-serif;
-}
 
-/*  Each animation's class, in the layer under the utilities, so one such
-    as [animation-delay:200ms] still outranks it. */
-@layer components {
-    .animate-hud-slam {
-        animation: hud-slam 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
-    }
-    .animate-hud-rise {
-        animation: hud-rise 360ms ease-out both;
-    }
-    .animate-hud-flash {
-        animation: hud-flash 450ms ease-out both;
-    }
-    .animate-hud-pulse {
-        animation: hud-pulse 900ms ease-in-out infinite;
-    }
-    .animate-hud-sweep {
-        animation: hud-sweep 700ms ease-out both;
-    }
-    .animate-hit-mark {
-        animation: hit-mark 150ms ease-out both;
-    }
-    .animate-kill-mark {
-        animation: kill-mark 240ms ease-out both;
-    }
-    .animate-kill-ring {
-        animation: kill-ring 240ms ease-out both;
-    }
-    .animate-damage-pop {
-        animation: damage-pop 750ms ease-out both;
-    }
-}
+    --animate-hud-slam: hud-slam 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    --animate-hud-rise: hud-rise 360ms ease-out both;
+    --animate-hud-flash: hud-flash 450ms ease-out both;
+    --animate-hud-pulse: hud-pulse 900ms ease-in-out infinite;
+    --animate-hud-sweep: hud-sweep 700ms ease-out both;
+    --animate-hit-mark: hit-mark 150ms ease-out both;
+    --animate-kill-mark: kill-mark 240ms ease-out both;
+    --animate-kill-ring: kill-ring 240ms ease-out both;
+    --animate-damage-pop: damage-pop 750ms ease-out both;
 
-/*  The crosshair's mark for a hit: out a little, then gone in about a
-    seventh of a second, as shooters keep theirs. */
-@keyframes hit-mark {
-    0% {
-        opacity: 1;
-        transform: scale(1.25);
+    /*  The crosshair's mark for a hit: out a little, then gone in about a
+        seventh of a second, as shooters keep theirs. */
+    @keyframes hit-mark {
+        0% {
+            opacity: 1;
+            transform: scale(1.25);
+        }
+        35% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1);
+        }
     }
-    35% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1);
-    }
-}
 
-/*  The mark for a kill: it lands larger and holds a beat longer, a
-    quarter of a second in all. */
-@keyframes kill-mark {
-    0% {
-        opacity: 1;
-        transform: scale(1.5);
+    /*  The mark for a kill: it lands larger and holds a beat longer, a
+        quarter of a second in all. */
+    @keyframes kill-mark {
+        0% {
+            opacity: 1;
+            transform: scale(1.5);
+        }
+        35% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1);
+        }
     }
-    35% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(1);
-    }
-}
 
-/*  The ring round a kill, opening out as it fades. */
-@keyframes kill-ring {
-    0% {
-        opacity: 0.9;
-        transform: scale(0.6);
+    /*  The ring round a kill, opening out as it fades. */
+    @keyframes kill-ring {
+        0% {
+            opacity: 0.9;
+            transform: scale(0.6);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1.35);
+        }
     }
-    100% {
-        opacity: 0;
-        transform: scale(1.35);
-    }
-}
 
-/*  A damage number: it pops, floats up and fades. */
-@keyframes damage-pop {
-    0% {
-        opacity: 0;
-        transform: translateY(0) scale(0.6);
+    /*  A damage number: it pops, floats up and fades. */
+    @keyframes damage-pop {
+        0% {
+            opacity: 0;
+            transform: translateY(0) scale(0.6);
+        }
+        15% {
+            opacity: 1;
+            transform: translateY(-10px) scale(1.25);
+        }
+        60% {
+            opacity: 1;
+            transform: translateY(-26px) scale(1);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-44px) scale(0.9);
+        }
     }
-    15% {
-        opacity: 1;
-        transform: translateY(-10px) scale(1.25);
-    }
-    60% {
-        opacity: 1;
-        transform: translateY(-26px) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-44px) scale(0.9);
-    }
-}
 
-/*  A title arriving: from large and faint to its size, past it and back. */
-@keyframes hud-slam {
-    0% {
-        opacity: 0;
-        transform: scale(1.6);
-        filter: blur(6px);
+    /*  A title arriving: from large and faint to its size, past it and back. */
+    @keyframes hud-slam {
+        0% {
+            opacity: 0;
+            transform: scale(1.6);
+            filter: blur(6px);
+        }
+        60% {
+            opacity: 1;
+            filter: blur(0);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
     }
-    60% {
-        opacity: 1;
-        filter: blur(0);
+    /*  A line or a card arriving from just below. */
+    @keyframes hud-rise {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
-    100% {
-        opacity: 1;
-        transform: scale(1);
+    /*  A hit: the pane lights red and fades. */
+    @keyframes hud-flash {
+        from {
+            opacity: 0.85;
+        }
+        to {
+            opacity: 0;
+        }
     }
-}
-/*  A line or a card arriving from just below. */
-@keyframes hud-rise {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
+    /*  Low health: the number throbs. */
+    @keyframes hud-pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.55;
+        }
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-/*  A hit: the pane lights red and fades. */
-@keyframes hud-flash {
-    from {
-        opacity: 0.85;
-    }
-    to {
-        opacity: 0;
-    }
-}
-/*  Low health: the number throbs. */
-@keyframes hud-pulse {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.55;
-    }
-}
-/*  The rule under a title drawing out from its middle. */
-@keyframes hud-sweep {
-    from {
-        transform: scaleX(0);
-    }
-    to {
-        transform: scaleX(1);
+    /*  The rule under a title drawing out from its middle. */
+    @keyframes hud-sweep {
+        from {
+            transform: scaleX(0);
+        }
+        to {
+            transform: scaleX(1);
+        }
     }
 }
 

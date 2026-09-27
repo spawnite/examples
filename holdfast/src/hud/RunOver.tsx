@@ -79,11 +79,10 @@ function RunRow({ entity }: RunRowProps) {
     );
 }
 
-/** Turns the camera's lock off while the run is over, so the engine lets
- *  the cursor go and the end screen's button takes a click, and back on
- *  once the next run starts, by Go again or by the lobby's timer: the
- *  engine's menu then shows Play, the one click that captures it. */
-export function useRunEndCursor(over: boolean) {
+/** Lets the cursor go while the run is over, so the end screen's button
+ *  takes a click, and wants it back once the next run starts: the Play
+ *  menu then asks for the one click that captures it. */
+function useFreeCursor(over: boolean) {
     const world = useWorld();
     useEffect(() => {
         const camera = world.queryFirst(CameraTrait);
@@ -91,6 +90,7 @@ export function useRunEndCursor(over: boolean) {
         if (over) {
             leaveFirstPerson(world);
             camera.set(CameraTrait, { locked: false });
+            document.exitPointerLock();
         } else camera.set(CameraTrait, { locked: true });
     }, [world, over]);
 }
@@ -104,7 +104,7 @@ export function RunOver() {
     const wardens = useQuery(PlayerName, WardenTrait);
     const own = useTrait(useQueryFirst(Hero, Authority), WardenTrait);
     const over = siege?.phase === SiegePhase.Over;
-    useRunEndCursor(over);
+    useFreeCursor(over);
     if (!siege || !over) return null;
 
     const ready = own?.ready === true;

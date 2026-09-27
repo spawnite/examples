@@ -48,11 +48,10 @@ afterEach(() => {
     window.history.replaceState(null, "", "/");
 });
 
-//  The gate is a module constant that reads DEV when the app module loads:
-//  each case imports the app afresh under a query naming its URL, a module
-//  of its own that reads the DEV the case stubbed, over the engine the file
-//  already loaded. A case that timed out renders nothing once the next has
-//  begun.
+//  The gate is a module constant, read when the app module loads: each case
+//  imports the app afresh under a query naming its URL, a module of its own
+//  that reads its own URL and its own DEV, over the engine the file already
+//  loaded. A case that timed out renders nothing once the next has begun.
 async function mountProductionAppAt(search: string, signal: AbortSignal) {
     vi.stubEnv("DEV", false);
     window.history.replaceState(null, "", search);
@@ -67,18 +66,26 @@ async function mountProductionAppAt(search: string, signal: AbortSignal) {
     });
 }
 
-it("shows the game alone outside development, even with ?debug", async ({
-    signal,
-}) => {
-    await mountProductionAppAt("/?debug", signal);
+it("shows the game alone outside development", async ({ signal }) => {
+    await mountProductionAppAt("/", signal);
 
     expect(screen.getByTestId("canvas")).toHaveAttribute(
         "data-game-name",
         "three-mmorpg",
     );
-    //  Absence over findBy's whole wait, so a chunk that lands after the
-    //  render is caught.
+    //  Absence over the same wait the positive case gets, so a chunk that
+    //  lands after the render is caught.
     await expect(
         screen.findByRole("button", { name: /Edit/ }),
     ).rejects.toThrow();
+});
+
+it("shows the devtools outside development when the URL carries ?debug", async ({
+    signal,
+}) => {
+    await mountProductionAppAt("/?debug", signal);
+
+    expect(
+        await screen.findByRole("button", { name: /Edit/ }),
+    ).toBeInTheDocument();
 });

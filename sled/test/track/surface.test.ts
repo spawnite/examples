@@ -8,7 +8,7 @@ import {
     type BufferGeometry,
 } from "three";
 import { describe, expect, it } from "vitest";
-import { buildRun, levels, Track, type LevelPoint } from "../../src/levels";
+import { buildRun, levels, type LevelPoint } from "../../src/levels";
 import { hillsideAt } from "../../src/track/hillside";
 import {
     edges,
@@ -134,7 +134,7 @@ describe("the hillside", () => {
     //  On level 1 the inside of the last bend reaches the stretch 35 m
     //  along: the hillside ramps from one to the other, with no step.
     it("meets itself where two stretches of the run meet", () => {
-        const run = buildRun(levels[Track.One].track.points);
+        const run = buildRun(levels[0].track.points);
         const geometry = buildSlopeSurface(run);
         const positions = geometry.getAttribute("position").array;
         const verts = surfaceVertices(geometry) / run.rings.length;
@@ -160,7 +160,7 @@ describe("the hillside", () => {
     //  Past level 1's finish, a cross-section of the stretch 43 m along
     //  starts to reach a spot at z = -52: it fades in from nothing.
     it("fades a cross-section in as its reach meets a spot", () => {
-        const run = buildRun(levels[Track.One].track.points);
+        const run = buildRun(levels[0].track.points);
         let last = hillsideAt(run, -39, -52.5);
         for (let step = 1; step <= 100; step++) {
             const height = hillsideAt(run, -39, -52.5 + step / 100);
@@ -172,7 +172,7 @@ describe("the hillside", () => {
 
 describe("the terrain", () => {
     it("meets the hillside's rim without a step", () => {
-        const run = buildRun(levels[Track.One].track.points);
+        const run = buildRun(levels[0].track.points);
         const geometry = buildSlopeSurface(run);
         const ground = new Mesh(
             geometry,

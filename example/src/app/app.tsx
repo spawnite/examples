@@ -33,10 +33,12 @@ function Readout() {
 //  Every map file under src/maps, each by its file name.
 registerMaps(import.meta.glob("../maps/*.json", { eager: true }));
 
-//  Development only: a production build drops the import.
-const ExampleDevtools = import.meta.env.DEV
-    ? lazy(() => import("./devtools"))
-    : undefined;
+//  Shown in development, or with ?debug in the URL to demo a deploy.
+//  A creator's game keeps the wiki's DEV-only gate.
+const showsDevtools =
+    import.meta.env.DEV ||
+    new URLSearchParams(window.location.search).has("debug");
+const ExampleDevtools = lazy(() => import("./devtools"));
 
 export function App() {
     return (
@@ -45,7 +47,7 @@ export function App() {
             <Scene name="run" component={Run} />
             <Scene name="platforms" component={Platforms} />
             <Readout />
-            {ExampleDevtools && (
+            {showsDevtools && (
                 <Suspense fallback={null}>
                     <ExampleDevtools />
                 </Suspense>

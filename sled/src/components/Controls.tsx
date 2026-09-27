@@ -5,7 +5,6 @@ import {
     isUiOwned,
     Joystick,
     Tap,
-    useHeadless,
     useInput,
 } from "@spawnite/engine";
 
@@ -15,17 +14,14 @@ import {
 export function Controls() {
     const steer = useInput((state) => state.steer);
     const jump = useInput((state) => state.jump);
-    const headless = useHeadless();
     useEffect(() => {
-        //  Headless there is no page to take a key from.
-        if (headless) return;
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.code === "Enter" && !event.repeat && !isUiOwned(event))
                 jump();
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [jump, headless]);
+    }, [jump]);
 
     return (
         <Hud>

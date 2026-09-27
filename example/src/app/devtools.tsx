@@ -1,11 +1,8 @@
-import { Devtools, type DevtoolsPanel } from "@spawnite/devtools";
+import { Devtools } from "@spawnite/devtools";
 
-//  Loaded only in development, through the lazy import in app.tsx, so a
-//  production build never reaches this module or the devtools behind it.
-
-//  Where `game add panel` has a panel's entry pasted.
-const panels: DevtoolsPanel[] = [];
+//  Loaded through the lazy import in app.tsx, only when its gate shows the
+//  tools, so a page that hides them never fetches this module.
 
 export default function ExampleDevtools() {
-    return <Devtools panels={panels} />;
+    return <Devtools />;
 }

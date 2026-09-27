@@ -5,12 +5,11 @@ import {
     Entity,
     extendGltfLoader,
     TrackTrigger,
-    useHeadless,
     type Track,
 } from "@spawnite/engine";
-import crag from "@spawnite/assets/models/sled/rock-crag.glb?url";
-import low from "@spawnite/assets/models/sled/rock-low.glb?url";
-import slab from "@spawnite/assets/models/sled/rock-slab.glb?url";
+import crag from "@game/assets/models/sled/rock-crag.glb?url";
+import low from "@game/assets/models/sled/rock-low.glb?url";
+import slab from "@game/assets/models/sled/rock-slab.glb?url";
 import {
     CourseKind,
     readCourseRegion,
@@ -69,8 +68,6 @@ export function Rock({ track, kind, spot }: RockProps) {
             turn: Math.atan2(-frame.right.z, frame.right.x),
         };
     }, [track, spot]);
-    //  Headless there is no page to draw it on, so no model loads.
-    const headless = useHeadless();
     return (
         <Entity name="Rock" position={position.toArray()}>
             <TrackTrigger
@@ -80,7 +77,7 @@ export function Rock({ track, kind, spot }: RockProps) {
             <Course kind={kind} />
             <group rotation-y={turn}>
                 <Suspense fallback={null}>
-                    {!headless && <RockLook kind={kind} />}
+                    <RockLook kind={kind} />
                 </Suspense>
             </group>
         </Entity>

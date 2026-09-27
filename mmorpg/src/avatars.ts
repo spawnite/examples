@@ -1,5 +1,5 @@
-import chifa from "@spawnite/assets/avatars/chifa.vrm?url";
-import fris from "@spawnite/assets/avatars/fris.vrm?url";
+import chifa from "@game/assets/avatars/chifa.vrm?url";
+import fris from "@game/assets/avatars/fris.vrm?url";
 import type { VrmBody } from "@spawnite/engine";
 
 /** Every body the game ships. */
@@ -23,26 +23,6 @@ export const avatars = {
             //  VRMSkirtTool names every bone of her skirt's chains this way.
             bonePrefix: "Skirt_",
         },
-        //  Every bone her file hangs a collider group on but the fingers:
-        //  sixty spheres of 5 to 8 mm that each hair and trim joint tested.
-        springColliderBones: [
-            "head",
-            "neck",
-            "chest",
-            "hips",
-            "leftUpperArm",
-            "leftLowerArm",
-            "leftHand",
-            "rightUpperArm",
-            "rightLowerArm",
-            "rightHand",
-            "leftUpperLeg",
-            "leftLowerLeg",
-            "leftFoot",
-            "rightUpperLeg",
-            "rightLowerLeg",
-            "rightFoot",
-        ],
     },
     //  Her file as delivered mapped the humanoid's hips to a ground-level
     //  `root` bone rather than to the pelvis her legs and spine hang from, so

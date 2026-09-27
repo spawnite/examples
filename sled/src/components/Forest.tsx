@@ -9,8 +9,8 @@ import {
     type TrackScatterCopy,
     type TrackScatterRow,
 } from "@spawnite/engine";
-import conifer from "@spawnite/assets/models/sled/conifer.glb?url";
-import spruce from "@spawnite/assets/models/sled/spruce.glb?url";
+import conifer from "@game/assets/models/sled/conifer.glb?url";
+import spruce from "@game/assets/models/sled/spruce.glb?url";
 import type { Run, TreeDef } from "../levels";
 import { wallLip } from "../track/profile";
 

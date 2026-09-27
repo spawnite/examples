@@ -1,10 +1,5 @@
 import { Fragment, useState } from "react";
-import {
-    domAnimation,
-    LazyMotion,
-    m,
-    useReducedMotionConfig,
-} from "motion/react";
+import { motion, useReducedMotionConfig } from "motion/react";
 import { useStore } from "zustand";
 import { useSaveStore } from "@spawnite/engine";
 import { CompletionRing } from "@spawnite/ui";
@@ -30,42 +25,40 @@ export function SaveIndicator() {
 
     return (
         <span role="status" className="inline-flex items-center">
-            <LazyMotion features={domAnimation}>
-                {showing && (
-                    //  The key is on the words as well as the glyph, so a second
-                    //  save inside one showing fills the ring again and replaces
-                    //  the announcement with its own: a save is read out per save,
-                    //  and a region whose text never changed would read the second
-                    //  one out not at all.
-                    <Fragment key={saveCount}>
-                        <span className="sr-only">Saved</span>
-                        <m.span
-                            aria-hidden
-                            className="block"
-                            initial={{ opacity: 1 }}
-                            //  Reduced motion keeps the same seconds of visibility
-                            //  and drops the fade, per Motion's accessibility page.
-                            //  The fill itself stays: it is opacity alone, with no
-                            //  transform to drop.
-                            animate={{ opacity: reducedMotion ? 0 : [1, 1, 0] }}
-                            transition={
-                                reducedMotion
-                                    ? { duration: 0, delay: visibleSeconds }
-                                    : {
-                                          duration: visibleSeconds,
-                                          times: [0, fadeStart, 1],
-                                          ease: "easeOut",
-                                      }
-                            }
-                            onAnimationComplete={() => {
-                                setLastShownCount(saveCount);
-                            }}
-                        >
-                            <CompletionRing className="size-6" />
-                        </m.span>
-                    </Fragment>
-                )}
-            </LazyMotion>
+            {showing && (
+                //  The key is on the words as well as the glyph, so a second
+                //  save inside one showing fills the ring again and replaces
+                //  the announcement with its own: a save is read out per save,
+                //  and a region whose text never changed would read the second
+                //  one out not at all.
+                <Fragment key={saveCount}>
+                    <span className="sr-only">Saved</span>
+                    <motion.span
+                        aria-hidden
+                        className="block"
+                        initial={{ opacity: 1 }}
+                        //  Reduced motion keeps the same seconds of visibility
+                        //  and drops the fade, per Motion's accessibility page.
+                        //  The fill itself stays: it is opacity alone, with no
+                        //  transform to drop.
+                        animate={{ opacity: reducedMotion ? 0 : [1, 1, 0] }}
+                        transition={
+                            reducedMotion
+                                ? { duration: 0, delay: visibleSeconds }
+                                : {
+                                      duration: visibleSeconds,
+                                      times: [0, fadeStart, 1],
+                                      ease: "easeOut",
+                                  }
+                        }
+                        onAnimationComplete={() => {
+                            setLastShownCount(saveCount);
+                        }}
+                    >
+                        <CompletionRing className="size-6" />
+                    </motion.span>
+                </Fragment>
+            )}
         </span>
     );
 }

@@ -18,7 +18,7 @@ afterEach(() => {
 async function describeFrom(distance: number) {
     const ride = await startRide();
     games.push(ride.game);
-    layCourse(ride);
+    layCourse(ride.game.world);
     ride.rider.set(TrackMoverTrait, { distance, speed: 7, enabled: true });
     const read = () => buildAiTree({ world: ride.game.world });
     const find = (is: string) => read().find((node) => node.is === is);
