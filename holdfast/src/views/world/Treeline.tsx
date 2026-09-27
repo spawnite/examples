@@ -1,8 +1,8 @@
-import oakFat from "@game/assets/models/holdfast/oak-fat.glb?url";
-import oakRound from "@game/assets/models/holdfast/oak-round.glb?url";
-import pineRound from "@game/assets/models/holdfast/pine-round.glb?url";
-import pineSpire from "@game/assets/models/holdfast/pine-spire.glb?url";
-import pineTall from "@game/assets/models/holdfast/pine-tall.glb?url";
+import oakFat from "@spawnite/assets/models/holdfast/oak-fat.glb?url";
+import oakRound from "@spawnite/assets/models/holdfast/oak-round.glb?url";
+import pineRound from "@spawnite/assets/models/holdfast/pine-round.glb?url";
+import pineSpire from "@spawnite/assets/models/holdfast/pine-spire.glb?url";
+import pineTall from "@spawnite/assets/models/holdfast/pine-tall.glb?url";
 import { useGLTF } from "@react-three/drei";
 import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
 import {

@@ -3,7 +3,11 @@ import { realpathSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { build, normalizePath, type Plugin } from "vite";
+import {
+    firstLoadCeilingBytes,
+    readFirstLoadBytes,
+} from "@spawnite/engine/vite";
+import { build, normalizePath, type Plugin, type Rolldown } from "vite";
 import { beforeAll, expect, it } from "vitest";
 
 const arenaFolder = path.resolve(import.meta.dirname, "..");
@@ -19,10 +23,13 @@ const devtoolsFolder = findPackageFolder("@spawnite/devtools");
 
 //  Every module the production build put into a chunk, read off the bundle
 //  itself, so a devtools module that survives in any form is caught, however
-//  the minifier renamed it.
+//  the minifier renamed it. And every file it wrote.
 function recordModules(moduleIds: string[]): Plugin {
     return {
         name: "record-modules",
+        writeBundle(_options, bundle) {
+            Object.assign(written, bundle);
+        },
         generateBundle(_options, bundle) {
             for (const output of Object.values(bundle)) {
                 if (output.type === "chunk")
@@ -33,6 +40,7 @@ function recordModules(moduleIds: string[]): Plugin {
 }
 
 const moduleIds: string[] = [];
+const written: Rolldown.OutputBundle = {};
 let html = "";
 
 beforeAll(async () => {
@@ -83,5 +91,11 @@ it("loads its script relative to the page, not the site root", () => {
 it("lets the page reach its own origin and the rooms domain's machines alone", () => {
     expect(html).toContain(
         `<meta http-equiv="Content-Security-Policy" content="connect-src &#39;self&#39; blob: wss://*.rooms.test">`,
+    );
+});
+
+it("keeps the first load under the platform's ceiling", () => {
+    expect(readFirstLoadBytes(written)).toBeLessThanOrEqual(
+        firstLoadCeilingBytes,
     );
 });

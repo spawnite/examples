@@ -1,14 +1,15 @@
 import {
     Camera,
     CameraPreset,
-    LookName,
     type LookPick,
     Player,
     registerMaps,
     World,
 } from "@spawnite/engine";
+import { dusk } from "@spawnite/engine/looks/dusk";
 import { Ambience } from "../audio/Ambience";
 import { Cues } from "../audio/Cues";
+import { Footsteps } from "../audio/Footsteps";
 import { Announcer } from "../hud/Announcer";
 import { BossBar } from "../hud/BossBar";
 import { CardPick } from "../hud/CardPick";
@@ -19,6 +20,8 @@ import { SiegeRules } from "../siege/SiegeRules";
 import { Vitals } from "../hud/Vitals";
 import { WaveBanner } from "../hud/WaveBanner";
 import { HitMarker } from "../hud/HitMarker";
+import { DamageArc } from "../hud/DamageArc";
+import { LowHealth } from "../hud/LowHealth";
 import { Actors } from "../views/Actors";
 import { Banners } from "../views/ambient/Banners";
 import { Crow } from "../views/ambient/Crow";
@@ -29,6 +32,7 @@ import { Circle } from "../views/Circle";
 import { LatePoses } from "../views/warden/latePoses";
 import { GroundCover } from "../views/GroundCover";
 import { HurtVignette } from "../views/HurtVignette";
+import { HitStop } from "../views/HitStop";
 import { TracerView } from "../views/TracerView";
 import { Arsenal } from "../weapons/Arsenal";
 import { TakePlace } from "../weapons/TakePlace";
@@ -48,7 +52,7 @@ const stillDaySeconds = 1e9;
  *  turns a colour pushed past white by the bloom, such as a warden's ring,
  *  black. The glow reaches the fire and the runes and not the ground. */
 const holdfastLook: LookPick = {
-    name: LookName.Dusk,
+    base: dusk,
     exposure: 1.18,
     bloom: { intensity: 0.8, threshold: 0.8 },
     grading: { saturation: 0, contrast: 0.12 },
@@ -83,10 +87,14 @@ export function Holdfast() {
             <DamageNumbers />
             <HitMarker />
             <HurtVignette />
+            <LowHealth />
+            <DamageArc />
+            <HitStop />
             <WaveBanner />
             <BossBar />
             <Announcer />
             <Cues />
+            <Footsteps />
             <Ambience />
             <Scoreboard />
             <Vitals />

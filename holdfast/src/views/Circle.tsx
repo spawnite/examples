@@ -67,20 +67,37 @@ interface StandingStoneProps {
     yaw: number;
 }
 
-/** One standing stone, facing the middle, its runes on its inner face. */
+/** The capsule a standing stone stands in: as wide as the drawn stone and
+ *  as tall as the shortest, so a shot or the camera's sweep at the heights
+ *  she fights at meets it.
+ *  ponytail: a capsule narrows to a point at its ends, so it is full width
+ *  only from 0.55 m to 2.65 m and misses the taller stones' tops up to
+ *  3.9 m; a box or a hull from the drawn model would cover the whole
+ *  stone. */
+const stoneCollider = { width: 1.1, height: 3.2 };
+
+/** One standing stone, facing the middle, its runes on its inner face.
+ *  The entity stands at the capsule's middle, which a collider is centred
+ *  on, and the drawing back down on the ground. */
 function StandingStone({ index, position, yaw }: StandingStoneProps) {
     const headless = useHeadless();
+    const [x, ground, z] = position;
+    const lift = stoneCollider.height / 2;
     return (
         <Entity
-            position={position}
+            position={[x, ground + lift, z]}
             collider={{
                 shape: ColliderShape.Capsule,
                 kind: BodyKind.Fixed,
-                size: [1.1, 2.8, 1.1],
+                size: [
+                    stoneCollider.width,
+                    stoneCollider.height,
+                    stoneCollider.width,
+                ],
             }}
         >
             {!headless && (
-                <group rotation-y={yaw}>
+                <group rotation-y={yaw} position-y={-lift}>
                     <Suspense fallback={null}>
                         <StoneModel index={index} />
                     </Suspense>

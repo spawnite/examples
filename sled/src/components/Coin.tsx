@@ -5,9 +5,10 @@ import {
     extendGltfLoader,
     Spin,
     TrackTrigger,
+    useHeadless,
     type Track,
 } from "@spawnite/engine";
-import coin from "@game/assets/models/sled/coin.glb?url";
+import coin from "@spawnite/assets/models/sled/coin.glb?url";
 import {
     coinFloat,
     CourseKind,
@@ -32,6 +33,8 @@ export function Coin({ track, spot }: CoinProps) {
         point.y += coinFloat + (spot.lift ?? 0);
         return point;
     }, [track, spot]);
+    //  Headless there is no page to draw it on, so no model loads.
+    const headless = useHeadless();
     return (
         <Entity name="Coin" position={position.toArray()}>
             <TrackTrigger
@@ -40,9 +43,15 @@ export function Coin({ track, spot }: CoinProps) {
             />
             <Course kind={CourseKind.Coin} />
             <Spin speed={spinSpeed} />
-            <Suspense fallback={null}>
-                <Gltf src={coin} extendLoader={extendGltfLoader} castShadow />
-            </Suspense>
+            {!headless && (
+                <Suspense fallback={null}>
+                    <Gltf
+                        src={coin}
+                        extendLoader={extendGltfLoader}
+                        castShadow
+                    />
+                </Suspense>
+            )}
         </Entity>
     );
 }

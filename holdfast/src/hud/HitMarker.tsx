@@ -11,19 +11,33 @@ export enum HitMark {
     Kill = "kill",
 }
 
-interface HitMarkState {
-    /** Counts up at each mark, so the same kind twice restarts the fade. */
-    count: number;
+/** Milliseconds a mark stays in the page: the kill's fade, the longer of
+ *  the two in styles.css. It leaves on this clock, so it goes even where
+ *  its fade does not run. */
+const markMilliseconds = 240;
+
+/** One mark drawn: its number, so the same kind twice restarts the fade,
+ *  and its kind. */
+interface ShownMark {
+    id: number;
     mark: HitMark;
 }
 
-const useHitMarks = create<HitMarkState>(() => ({
-    count: 0,
-    mark: HitMark.Hit,
+const useHitMarks = create<{ shown: ShownMark | null }>(() => ({
+    shown: null,
 }));
+let nextId = 0;
 
 export function markHit(mark: HitMark) {
-    useHitMarks.setState(({ count }) => ({ count: count + 1, mark }));
+    const shown: ShownMark = { id: nextId++, mark };
+    useHitMarks.setState({ shown });
+    setTimeout(
+        () =>
+            useHitMarks.setState((state) =>
+                state.shown === shown ? { shown: null } : state,
+            ),
+        markMilliseconds,
+    );
 }
 
 /** Each tick, turned about the crosshair and pushed out from it: written
@@ -41,16 +55,15 @@ const killTicks = [
     "[transform:rotate(315deg)_translateX(8px)]",
 ];
 
-/** The mark itself, at the middle of the screen. Its fade holds its last
- *  frame, so a mark stays in the page, unseen, until the next replaces it. */
+/** The mark itself, at the middle of the screen, until its fade is over. */
 export function LatestHitMark() {
-    const { count, mark } = useHitMarks();
-    if (count === 0) return null;
-    const kill = mark === HitMark.Kill;
+    const shown = useHitMarks((state) => state.shown);
+    if (!shown) return null;
+    const kill = shown.mark === HitMark.Kill;
     return (
         <Text
             //  A new element per mark restarts its fade.
-            key={count}
+            key={shown.id}
             as="div"
             aria-label={kill ? "Kill" : "Hit"}
             className={`pointer-events-none fixed top-1/2 left-1/2 z-20 size-0 ${kill ? "animate-kill-mark" : "animate-hit-mark"}`}

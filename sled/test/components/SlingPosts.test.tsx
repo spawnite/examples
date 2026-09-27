@@ -14,7 +14,7 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Ref } from "@spawnite/engine";
 import { SlingPosts } from "../../src/components/SlingPosts";
-import { buildRun, levels } from "../../src/levels";
+import { buildRun, levels, Track } from "../../src/levels";
 import { spawnDistance } from "../../src/ride/rider";
 import { pullMaximum, SlingTrait } from "../../src/ride/sling";
 
@@ -30,7 +30,7 @@ vi.mock("@react-three/drei", async (importOriginal) => ({
 beforeEach(() => vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true));
 afterEach(() => vi.unstubAllGlobals());
 
-const { track } = buildRun(levels[0].track.points);
+const { track } = buildRun(levels[Track.One].track.points);
 const aimSpan = 2;
 //  Where the band is tied, half a metre up each post.
 const tips = [1, -1].map((side) => {

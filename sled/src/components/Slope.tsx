@@ -7,10 +7,10 @@ import {
     type Texture,
 } from "three";
 import { TrackSurface, useKtx2 } from "@spawnite/engine";
-import ice from "@game/assets/textures/sled/ice.ktx2?url";
-import iceNormal from "@game/assets/textures/sled/ice-n.ktx2?url";
-import snow from "@game/assets/textures/sled/snow.ktx2?url";
-import snowNormal from "@game/assets/textures/sled/snow-n.ktx2?url";
+import ice from "@spawnite/assets/textures/sled/ice.ktx2?url";
+import iceNormal from "@spawnite/assets/textures/sled/ice-n.ktx2?url";
+import snow from "@spawnite/assets/textures/sled/snow.ktx2?url";
+import snowNormal from "@spawnite/assets/textures/sled/snow-n.ktx2?url";
 import { palette } from "../palette";
 import { TerrainMaterial } from "./TerrainMaterial";
 

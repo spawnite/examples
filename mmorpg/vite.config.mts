@@ -15,13 +15,6 @@ export default defineConfig({
         watchModels(),
         roomsContentPolicy(process.env.ROOMS_DOMAIN),
     ],
-    build: {
-        //  A sound is fetched when a view preloads it, never for the first
-        //  frame; under Vite's 4 kB limit it would ride in the entry chunk
-        //  as base64.
-        assetsInlineLimit: (file: string) =>
-            file.endsWith(".mp3") ? false : undefined,
-    },
     test: {
         globals: true,
         environment: "jsdom",

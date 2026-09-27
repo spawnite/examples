@@ -1,21 +1,30 @@
 import { followVolume, VolumeChannel } from "@spawnite/engine";
-import card from "@game/assets/sounds/holdfast/card.mp3?url";
-import coin from "@game/assets/sounds/holdfast/coin.mp3?url";
-import down from "@game/assets/sounds/holdfast/down.mp3?url";
-import duskDrone from "@game/assets/sounds/holdfast/dusk-drone.mp3?url";
-import fireCrackle from "@game/assets/sounds/holdfast/fire-crackle.mp3?url";
-import hitOne from "@game/assets/sounds/holdfast/hit-1.mp3?url";
-import hitTwo from "@game/assets/sounds/holdfast/hit-2.mp3?url";
-import hurt from "@game/assets/sounds/holdfast/hurt.mp3?url";
-import kill from "@game/assets/sounds/holdfast/kill.mp3?url";
-import nightCrickets from "@game/assets/sounds/holdfast/night-crickets.mp3?url";
-import revive from "@game/assets/sounds/holdfast/revive.mp3?url";
-import rift from "@game/assets/sounds/holdfast/rift.mp3?url";
-import runOver from "@game/assets/sounds/holdfast/run-over.mp3?url";
-import shotOne from "@game/assets/sounds/holdfast/shot-1.mp3?url";
-import shotTwo from "@game/assets/sounds/holdfast/shot-2.mp3?url";
-import waveHeld from "@game/assets/sounds/holdfast/wave-held.mp3?url";
-import waveStart from "@game/assets/sounds/holdfast/wave-start.mp3?url";
+import card from "@spawnite/assets/sounds/holdfast/card.mp3?url";
+import coin from "@spawnite/assets/sounds/holdfast/holdfast-coin.mp3?url";
+import down from "@spawnite/assets/sounds/holdfast/down.mp3?url";
+import duskDrone from "@spawnite/assets/sounds/holdfast/dusk-drone.mp3?url";
+import fireCrackle from "@spawnite/assets/sounds/holdfast/fire-crackle.mp3?url";
+import hitOne from "@spawnite/assets/sounds/holdfast/hit-1.mp3?url";
+import hitTwo from "@spawnite/assets/sounds/holdfast/hit-2.mp3?url";
+import hurt from "@spawnite/assets/sounds/holdfast/hurt.mp3?url";
+import kill from "@spawnite/assets/sounds/holdfast/kill.mp3?url";
+import nightCrickets from "@spawnite/assets/sounds/holdfast/night-crickets.mp3?url";
+import revive from "@spawnite/assets/sounds/holdfast/revive.mp3?url";
+import rift from "@spawnite/assets/sounds/holdfast/rift.mp3?url";
+import runOver from "@spawnite/assets/sounds/holdfast/run-over.mp3?url";
+import shotOne from "@spawnite/assets/sounds/holdfast/shot-1.mp3?url";
+import shotTwo from "@spawnite/assets/sounds/holdfast/shot-2.mp3?url";
+import stepGrassOne from "@spawnite/assets/sounds/holdfast/step-grass-1.mp3?url";
+import stepGrassTwo from "@spawnite/assets/sounds/holdfast/step-grass-2.mp3?url";
+import stepGrassThree from "@spawnite/assets/sounds/holdfast/step-grass-3.mp3?url";
+import stepPathOne from "@spawnite/assets/sounds/holdfast/step-path-1.mp3?url";
+import stepPathTwo from "@spawnite/assets/sounds/holdfast/step-path-2.mp3?url";
+import stepPathThree from "@spawnite/assets/sounds/holdfast/step-path-3.mp3?url";
+import stepPavingOne from "@spawnite/assets/sounds/holdfast/step-paving-1.mp3?url";
+import stepPavingTwo from "@spawnite/assets/sounds/holdfast/step-paving-2.mp3?url";
+import stepPavingThree from "@spawnite/assets/sounds/holdfast/step-paving-3.mp3?url";
+import waveHeld from "@spawnite/assets/sounds/holdfast/wave-held.mp3?url";
+import waveStart from "@spawnite/assets/sounds/holdfast/wave-start.mp3?url";
 import { AudioContext as ThreeAudioContext } from "three";
 import { blendLoopSeam } from "./loops";
 
@@ -41,6 +50,10 @@ export enum Sound {
     Card = "card",
     RunOver = "runOver",
     Rift = "rift",
+    StepGrass = "stepGrass",
+    StepPath = "stepPath",
+    StepPaving = "stepPaving",
+    Heartbeat = "heartbeat",
 }
 
 let context: AudioContext | undefined;
@@ -270,6 +283,42 @@ const recipes: Record<Sound, Voice[]> = {
             filter: { type: "lowpass", frequency: 300 },
         },
     ],
+    [Sound.StepGrass]: [
+        {
+            type: "noise",
+            seconds: 0.08,
+            level: 0.05,
+            filter: { type: "lowpass", frequency: 900 },
+        },
+    ],
+    [Sound.StepPath]: [
+        {
+            type: "noise",
+            seconds: 0.07,
+            level: 0.06,
+            filter: { type: "lowpass", frequency: 600 },
+        },
+    ],
+    [Sound.StepPaving]: [
+        {
+            type: "noise",
+            seconds: 0.05,
+            level: 0.06,
+            filter: { type: "lowpass", frequency: 1500 },
+        },
+    ],
+    //  Lub-dub: two low thumps, the second a little softer.
+    [Sound.Heartbeat]: [
+        { type: "sine", from: 60, to: 40, seconds: 0.12, level: 0.5 },
+        {
+            type: "sine",
+            from: 60,
+            to: 40,
+            delay: 0.2,
+            seconds: 0.12,
+            level: 0.35,
+        },
+    ],
 };
 
 /** A recorded sound: the files a play picks from, and how it plays. */
@@ -366,6 +415,22 @@ const recordings: Record<Sound, Recording> = {
     //  -4.0 dB, played low so a force field's hum reads as a growl from
     //  the ground.
     [Sound.Rift]: { urls: [rift], gain: 0.25, rate: 0.7 },
+    //  Each step -20 dB, and played about 12 dB under a shot: she hears her
+    //  feet three times a second under everything else.
+    [Sound.StepGrass]: {
+        urls: [stepGrassOne, stepGrassTwo, stepGrassThree],
+        gain: 0.18,
+    },
+    [Sound.StepPath]: {
+        urls: [stepPathOne, stepPathTwo, stepPathThree],
+        gain: 0.18,
+    },
+    [Sound.StepPaving]: {
+        urls: [stepPavingOne, stepPavingTwo, stepPavingThree],
+        gain: 0.18,
+    },
+    //  No file: it always plays its recipe.
+    [Sound.Heartbeat]: { urls: [], gain: 1 },
 };
 
 /** One looping layer of the night's bed. */

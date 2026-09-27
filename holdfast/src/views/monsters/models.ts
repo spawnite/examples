@@ -1,6 +1,6 @@
-import brute from "@game/assets/models/holdfast/brute.glb?url";
-import husk from "@game/assets/models/holdfast/husk.glb?url";
-import skitter from "@game/assets/models/holdfast/skitter.glb?url";
+import brute from "@spawnite/assets/models/holdfast/brute.glb?url";
+import husk from "@spawnite/assets/models/holdfast/husk.glb?url";
+import skitter from "@spawnite/assets/models/holdfast/skitter.glb?url";
 import { useGLTF } from "@react-three/drei";
 import { MonsterKind } from "../../siege/traits";
 

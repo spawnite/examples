@@ -1,5 +1,6 @@
 import { Vector3 } from "three";
-import { calculateDaylight, looks } from "@spawnite/engine";
+import { calculateDaylight } from "@spawnite/engine";
+import { dusk } from "@spawnite/engine/looks/dusk";
 
 //  The dusk air: the colour the far forest fades into, and the metres from
 //  the camera where the fade starts and where it hides all. A warden in the
@@ -11,5 +12,5 @@ export const duskAir = { color: "#3a4163", near: 22, far: 92 };
 /** The sun as the dusk look's rig stands it: the sky's disc and the
  *  skyline's warm side both sit where the shadows come from. */
 export const duskSun = new Vector3().copy(
-    calculateDaylight(looks.dusk.hour).direction,
+    calculateDaylight(dusk.hour).direction,
 );

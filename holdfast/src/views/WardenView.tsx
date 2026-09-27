@@ -56,14 +56,12 @@ function WardenRig({ entity, vrm, hue, down }: WardenRigProps) {
     const downRef = useRef(down);
     downRef.current = down;
     useLayoutEffect(() => {
-        const arms = [
-            humanoid.getRawBoneNode(VRMHumanBoneName.RightUpperArm),
-            humanoid.getRawBoneNode(VRMHumanBoneName.LeftUpperArm),
-            humanoid.getNormalizedBoneNode(VRMHumanBoneName.RightUpperArm),
-            humanoid.getNormalizedBoneNode(VRMHumanBoneName.LeftUpperArm),
+        const upperBody = [
+            humanoid.getRawBoneNode(VRMHumanBoneName.Spine),
+            humanoid.getNormalizedBoneNode(VRMHumanBoneName.Spine),
         ];
         return addLatePose(() => {
-            //  Down, her arms keep the clip's.
+            //  Down, her upper body keeps the clip's.
             if (downRef.current) return;
             //  Her own page knows where she aims up or down; another's holds
             //  the gun level.
@@ -78,7 +76,7 @@ function WardenRig({ entity, vrm, hue, down }: WardenRigProps) {
             humanoid.update();
             //  The renderer reads the bones' world matrices next, and the
             //  gun hangs from the normalized hand.
-            for (const arm of arms) arm?.updateMatrixWorld(true);
+            for (const bone of upperBody) bone?.updateMatrixWorld(true);
         });
     }, [camera, humanoid, own, vrm]);
 

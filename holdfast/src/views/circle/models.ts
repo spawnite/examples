@@ -1,9 +1,9 @@
-import campfireLogs from "@game/assets/models/holdfast/campfire-logs.glb?url";
-import leaningLog from "@game/assets/models/log.glb?url";
-import campfireStones from "@game/assets/models/holdfast/campfire-stones.glb?url";
-import chippedStone from "@game/assets/models/holdfast/menhir-chipped.glb?url";
-import slabStone from "@game/assets/models/holdfast/menhir-slab.glb?url";
-import tallStone from "@game/assets/models/holdfast/menhir-tall.glb?url";
+import campfireLogs from "@spawnite/assets/models/holdfast/campfire-logs.glb?url";
+import leaningLog from "@spawnite/assets/models/log.glb?url";
+import campfireStones from "@spawnite/assets/models/holdfast/campfire-stones.glb?url";
+import chippedStone from "@spawnite/assets/models/holdfast/menhir-chipped.glb?url";
+import slabStone from "@spawnite/assets/models/holdfast/menhir-slab.glb?url";
+import tallStone from "@spawnite/assets/models/holdfast/menhir-tall.glb?url";
 import { useGLTF } from "@react-three/drei";
 import { Mesh, type BufferGeometry, type Object3D } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";

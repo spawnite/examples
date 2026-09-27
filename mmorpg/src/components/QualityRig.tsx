@@ -26,6 +26,11 @@ export function QualityRig({ tier }: QualityRigProps) {
     );
 
     useEffect(() => setDpr(pixelRatio), [setDpr, pixelRatio]);
+    //  The engine's post-processing resolves Auto through the same tier.
+    useEffect(
+        () => qualityStore.getState().setTier(tier),
+        [qualityStore, tier],
+    );
 
     return (
         <PerformanceMonitor

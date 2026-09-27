@@ -1,5 +1,5 @@
-import chifa from "@game/assets/avatars/chifa.vrm?url";
-import fris from "@game/assets/avatars/fris.vrm?url";
+import chifa from "@spawnite/assets/avatars/chifa.vrm?url";
+import fris from "@spawnite/assets/avatars/fris.vrm?url";
 import { useGLTF } from "@react-three/drei";
 import { extendVrmLoader, MOTION_URLS, type VrmBody } from "@spawnite/engine";
 
@@ -19,6 +19,24 @@ const bodies: VrmBody[] = [
             radii: { upperArm: 0.06, lowerArm: 0.055, hand: 0.045 },
             bonePrefix: "Skirt_",
         },
+        springColliderBones: [
+            "head",
+            "neck",
+            "chest",
+            "hips",
+            "leftUpperArm",
+            "leftLowerArm",
+            "leftHand",
+            "rightUpperArm",
+            "rightLowerArm",
+            "rightHand",
+            "leftUpperLeg",
+            "leftLowerLeg",
+            "leftFoot",
+            "rightUpperLeg",
+            "rightLowerLeg",
+            "rightFoot",
+        ],
     },
     {
         model: chifa,

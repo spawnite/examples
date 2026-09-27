@@ -9,7 +9,7 @@ import {
     TrackMoverTrait,
     type HeadlessGame,
 } from "@spawnite/engine/core";
-import { levels } from "../../src/levels";
+import { levels, Track } from "../../src/levels";
 import {
     RunEnd,
     RunTrait,
@@ -27,13 +27,13 @@ afterEach(() => {
     for (const game of games.splice(0)) game.world.destroy();
 });
 
-const finishAt = levels[0].finish.at;
+const finishAt = levels[Track.One].finish.at;
 
 async function start() {
     const ride = await startRide();
     games.push(ride.game);
     const { game, rider } = ride;
-    layCourse(game.world);
+    layCourse(ride);
     const round = () => game.world.queryFirst(RoundTrait)?.get(RoundTrait);
     //  Held at `distance` and `speed`: disabled, so the step moves it not
     //  at all, and the course reads it where the test put it.
