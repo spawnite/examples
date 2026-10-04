@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, expect, it } from "vitest";
-import { fixedStepSeconds } from "@spawnite/engine";
+import { fixedStepSeconds, InvulnerableTrait } from "@spawnite/engine";
 import { spawnMonster } from "../../src/siege/monsters";
 import { MonsterKind, WardenTrait } from "../../src/siege/traits";
 import { planWave } from "../../src/siege/waves";
@@ -51,4 +51,13 @@ it("lets the waiting monster strike her once the half second has passed", async 
     game.step(0.55);
 
     expect(warden.get(WardenTrait)?.health).toBe(90);
+});
+
+it("lands no blow on an invulnerable warden, as a profile's bot plays", async () => {
+    const { game, warden } = await surroundWarden();
+    warden.add(InvulnerableTrait);
+
+    game.step(fixedStepSeconds);
+
+    expect(warden.get(WardenTrait)?.health).toBe(100);
 });

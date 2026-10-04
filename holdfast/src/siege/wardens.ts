@@ -1,17 +1,29 @@
-import { createQuery, Not, type Entity, type World } from "koota";
+import { createQuery, Not, Or, type Entity, type World } from "koota";
 import { Vector3 } from "three";
 import {
-    Ground,
+    DisconnectedTrait,
+    GroundTrait,
     HealthTrait,
-    Hero,
-    Movement,
+    HeroTrait,
+    MovementTrait,
     placeSpawnPoints,
     readEach,
     teleportActor,
-    Transform,
+    TransformTrait,
 } from "@spawnite/engine/core";
+import { LifeMachine, LifeTrait, ReadinessTrait } from "./life";
 import { declareWardenStats } from "./stats";
-import { ShotCredit, StandingWardens, Stride, WardenTrait } from "./traits";
+import {
+    CareerTrait,
+    NewcomerTrait,
+    ShotCreditTrait,
+    StandingWardensTrait,
+    StrideTrait,
+    TargetWardensTrait,
+    UnattendedTrait,
+    WardenTrait,
+} from "./traits";
+import { PhaseTrait } from "./phase";
 
 //  The heroes the room spawns, taken into the siege.
 
@@ -21,10 +33,10 @@ const standMetres = 6.5;
 /** Places round the fire, one per colour. */
 const standPlaces = 4;
 
-const newHeroes = createQuery(Hero, Not(WardenTrait));
+const newHeroes = createQuery(HeroTrait, Not(WardenTrait));
 /** Every warden in the room, down or not. */
-export const wardens = createQuery(Hero, WardenTrait);
-const placedWardens = createQuery(Hero, WardenTrait, Transform);
+export const wardens = createQuery(HeroTrait, WardenTrait);
+const placedWardens = createQuery(HeroTrait, WardenTrait, TransformTrait);
 
 /** Whether a warden already wears `hue`. */
 function isHueWorn(world: World, hue: number) {
@@ -61,10 +73,10 @@ export function placeWardenSpawns(world: World) {
  *  where every run starts. A body the physics has built moves there at
  *  once; one it has not is built there. */
 export function standWarden(world: World, warden: Entity) {
-    const feet = warden.get(Transform);
+    const feet = warden.get(TransformTrait);
     if (!feet) return;
     const { x, z } = findWardenPlace(warden.get(WardenTrait)?.hue ?? 0, feet);
-    const surface = world.queryFirst(Ground)?.get(Ground)?.surface;
+    const surface = world.queryFirst(GroundTrait)?.get(GroundTrait)?.surface;
     feet.setY(surface?.getHeightAt({ x, z }) ?? 0);
     teleportActor(world, warden);
 }
@@ -73,49 +85,92 @@ export function standWarden(world: World, warden: Entity) {
  *  health moves to her `WardenTrait`, off the engine's `HealthTrait`, so no
  *  shot damages her and the engine's reap never removes her at zero. Her
  *  colour is the lowest the others leave free, her stats start at their
- *  bases, and her stride is the movement the room spawned her with. She
- *  stands where the room spawned her, at her colour's place. */
+ *  bases, her stride is the movement the room spawned her with, and her
+ *  career is the one her save restored, or an empty one. She
+ *  stands where the room spawned her, at her colour's place, and waits for
+ *  the siege to welcome her into the run, or into the wait for the next. */
 export function adoptWardens(world: World) {
     readEach(world, newHeroes, (_traits, hero) => {
         let hue = 0;
         while (isHueWorn(world, hue)) hue++;
-        const movement = hero.get(Movement);
+        const movement = hero.get(MovementTrait);
         hero.remove(HealthTrait);
         hero.add(
             WardenTrait({ hue }),
-            ShotCredit({ shots: 2 }),
-            Stride({
+            LifeTrait,
+            ReadinessTrait,
+            ShotCreditTrait({ shots: 2 }),
+            StrideTrait({
                 speed: movement?.speed ?? 0,
                 jumpHeight: movement?.jumpHeight ?? 0,
             }),
+            NewcomerTrait,
         );
         declareWardenStats(hero);
+        //  Her save may have put hers on already, as she joined.
+        if (!hero.has(CareerTrait)) hero.add(CareerTrait);
     });
 }
 
-/** Gathers the wardens on their feet for this step's systems. */
+/** Whether her player's connection is up: a warden whose dropped stays in
+ *  the room a while, stood still, for her player to come back to. */
+export function isConnected(warden: Entity) {
+    return !warden.has(DisconnectedTrait);
+}
+
+const heldByNobody = createQuery(Or(PhaseTrait, WardenTrait));
+
+/** Marks the siege and every warden `UnattendedTrait` while no warden's player
+ *  is connected, and takes it off once one is, before the machines count
+ *  this step's waits. */
+export function holdUnattended(world: World) {
+    let attended = false;
+    for (const warden of world.query(wardens))
+        if (isConnected(warden)) attended = true;
+    for (const entity of world.query(heldByNobody))
+        if (attended) entity.remove(UnattendedTrait);
+        else if (!entity.has(UnattendedTrait)) entity.add(UnattendedTrait);
+}
+
+/** Gathers the wardens on their feet whose player is connected for this
+ *  step's systems, and those of them a monster may chase and hurt. */
 export function gatherStandingWardens(world: World) {
-    if (!world.has(StandingWardens)) world.add(StandingWardens);
-    const standing = world.get(StandingWardens);
-    if (!standing) return;
+    if (!world.has(StandingWardensTrait))
+        world.add(StandingWardensTrait, TargetWardensTrait);
+    const standing = world.get(StandingWardensTrait);
+    const targets = world.get(TargetWardensTrait);
+    if (!standing || !targets) return;
     standing.length = 0;
-    readEach(world, placedWardens, ([survivor], warden) => {
-        if (!survivor.down) standing.push(warden);
+    targets.length = 0;
+    readEach(world, placedWardens, (_traits, warden) => {
+        //  A dropped warden stands still: she revives nobody and anchors
+        //  no spawn.
+        if (warden.has(LifeMachine.is.down) || !isConnected(warden)) return;
+        standing.push(warden);
+        if (!warden.has(LifeMachine.is.sheltered)) targets.push(warden);
     });
 }
 
-/** The wardens on their feet, as this step gathered them. */
+/** The wardens on their feet whose player is connected, as this step
+ *  gathered them. */
 export function queryStandingWardens(world: World) {
-    return world.get(StandingWardens) ?? [];
+    return world.get(StandingWardensTrait) ?? [];
 }
 
-/** Whether `hero` is a warden on her feet, the one a monster chases: by
- *  the list the room's step gathered, which reads no trait per call, or by
- *  her own trait on a page, whose world runs no siege. */
-export function isWardenStanding(world: World, hero: Entity) {
-    const standing = world.get(StandingWardens);
-    if (standing) return standing.includes(hero);
-    return hero.get(WardenTrait)?.down === false;
+/** The standing wardens a monster may chase and hurt, as this step
+ *  gathered them. */
+export function queryTargetWardens(world: World) {
+    return world.get(TargetWardensTrait) ?? [];
+}
+
+/** Whether `hero` is a warden a monster chases: on her feet, not
+ *  sheltered, her player connected. By the list the room's step gathered,
+ *  which reads no trait per call, or by her own traits on a page, whose
+ *  world runs no siege. */
+export function isWardenTarget(world: World, hero: Entity) {
+    const targets = world.get(TargetWardensTrait);
+    if (targets) return targets.includes(hero);
+    return hero.has(LifeMachine.is.standing) && isConnected(hero);
 }
 
 /** Every warden in the room, down or not. */

@@ -1,10 +1,10 @@
-import campfireLogs from "@game/assets/models/holdfast/campfire-logs.glb?url";
-import leaningLog from "@game/assets/models/log.glb?url";
-import campfireStones from "@game/assets/models/holdfast/campfire-stones.glb?url";
-import chippedStone from "@game/assets/models/holdfast/menhir-chipped.glb?url";
-import slabStone from "@game/assets/models/holdfast/menhir-slab.glb?url";
-import tallStone from "@game/assets/models/holdfast/menhir-tall.glb?url";
-import { useGLTF } from "@react-three/drei";
+import campfireLogs from "@spawnite/assets/models/holdfast/campfire-logs.glb?url";
+import leaningLog from "@spawnite/assets/models/log.glb?url";
+import campfireStones from "@spawnite/assets/models/holdfast/campfire-stones.glb?url";
+import chippedStone from "@spawnite/assets/models/holdfast/menhir-chipped.glb?url";
+import slabStone from "@spawnite/assets/models/holdfast/menhir-slab.glb?url";
+import tallStone from "@spawnite/assets/models/holdfast/menhir-tall.glb?url";
+import { useModel } from "@spawnite/engine";
 import { Mesh, type BufferGeometry, type Object3D } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
@@ -28,7 +28,7 @@ const allModels = [
 
 /** Starts fetching every model while the page shows its menu. */
 export function preloadCircleModels() {
-    for (const url of allModels) useGLTF.preload(url);
+    for (const url of allModels) useModel.preload(url);
 }
 
 const mergedShapes = new WeakMap<Object3D, BufferGeometry>();
@@ -36,7 +36,7 @@ const mergedShapes = new WeakMap<Object3D, BufferGeometry>();
 /** A model's meshes as one geometry in their own frame, its foot at 0,
  *  merged once per file and shared by every stone drawn with it. */
 export function useModelShape(url: string): BufferGeometry {
-    const { scene } = useGLTF(url);
+    const { scene } = useModel(url);
     const known = mergedShapes.get(scene);
     if (known) return known;
     const parts: BufferGeometry[] = [];

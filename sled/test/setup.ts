@@ -1,8 +1,16 @@
-import { afterEach } from "vitest";
+//  jsdom has no showModal or close: these set and clear `open`, which is
+//  what the browser's own do to the attribute.
+if (typeof HTMLDialogElement !== "undefined") {
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+        this.open = true;
+    };
+    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+        this.open = false;
+    };
+}
 
-// Keep DOM libraries out of tests that use the default Node environment.
-if (typeof document !== "undefined") {
-    const { cleanup } = await import("@testing-library/react");
-    await import("@testing-library/jest-dom/vitest");
-    afterEach(cleanup);
+//  jsdom lays nothing out, so it scrolls nothing and has no scrollTo: one
+//  that does nothing stands in for the map's.
+if (typeof Element !== "undefined") {
+    Element.prototype.scrollTo = () => undefined;
 }

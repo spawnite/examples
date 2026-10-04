@@ -3,7 +3,6 @@ import {
     Icon,
     Joystick,
     Panel,
-    Player,
     SideCamera,
     Slot,
     Tap,
@@ -14,6 +13,12 @@ import {
 } from "@spawnite/engine";
 import "../items";
 import { Platform } from "../components/Platform";
+import { Spirit } from "../components/Spirit";
+
+//  A room and `spawnite simulate` load this file alone, so it exports the
+//  game's plugins and its save.
+export { plugins } from "../game";
+export { save } from "../save";
 
 /** Metres a platform's top rises over the one before: past the 0.6 m step,
  *  so she jumps rather than walks up, and under the 1.2 m jump. */
@@ -38,7 +43,7 @@ export function Platforms() {
 
     return (
         <World map="meadow">
-            <Player position={startPosition} />
+            <Spirit position={startPosition} />
             <SideCamera />
             {platformTops.map((top, index) => (
                 <Platform
@@ -51,16 +56,8 @@ export function Platforms() {
                 <Panel slot={Slot.Bottom}>
                     <Text>A and D walk, Space jumps. Climb to the top.</Text>
                 </Panel>
-                {/*  Drawn only for a thumb. */}
-                <Joystick
-                    onSteer={steer}
-                    className="fixed bottom-14 left-14 hidden pointer-coarse:flex"
-                />
-                <Tap
-                    label="Jump"
-                    onTap={jump}
-                    className="fixed right-14 bottom-14 hidden pointer-coarse:flex"
-                >
+                <Joystick onSteer={steer} />
+                <Tap label="Jump" onTap={jump}>
                     <Icon name="arrow-big-up" />
                 </Tap>
             </Hud>

@@ -1,0 +1,80 @@
+{
+    "name": "Swordsman",
+    "kind": "job",
+    "weapon": "sword",
+    "description": "Fights up close with the blade, and learns to hold one in each hand.",
+    "color": "#ff8a5c",
+    "skills": [
+        {
+            "id": "keenEdge",
+            "name": "Keen Edge",
+            "description": "A sharper blade.",
+            "sign": "blade",
+            "color": "#ffb08a",
+            "row": 0,
+            "column": 0,
+            "ranks": 5,
+            "modifiers": [
+                {
+                    "stat": "damage",
+                    "perRank": 5
+                }
+            ]
+        },
+        {
+            "id": "swiftStrikes",
+            "name": "Swift Strikes",
+            "description": "Quicker swings.",
+            "sign": "haste",
+            "color": "#ffd24a",
+            "row": 0,
+            "column": 1,
+            "ranks": 5,
+            "modifiers": [
+                {
+                    "stat": "attackSpeed",
+                    "perRank": 4
+                }
+            ]
+        },
+        {
+            "id": "whirlwind",
+            "name": "Whirlwind",
+            "description": "A spinning cut that hits everything around you.",
+            "sign": "whirl",
+            "color": "#ff8a5c",
+            "row": 1,
+            "column": 0,
+            "ranks": 3,
+            "needsSkill": "keenEdge",
+            "needsRank": 1,
+            "active": {
+                "action": "area",
+                "cooldown": 8,
+                "stamina": 20,
+                "damage": 1.5,
+                "damagePerRank": 0.25,
+                "shape": "circle",
+                "reach": 2.8
+            },
+            "cue": {
+                "move": "slash",
+                "element": "none",
+                "arcs": 4,
+                "shake": 0.12
+            }
+        },
+        {
+            "id": "twinBlades",
+            "name": "Twin Blades",
+            "description": "A sword in each hand.",
+            "sign": "twinBlades",
+            "color": "#9fd8ff",
+            "row": 1,
+            "column": 1,
+            "ranks": 1,
+            "needsPoints": 3,
+            "unlocks": ["dualWield"]
+        }
+    ]
+}

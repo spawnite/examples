@@ -1,9 +1,10 @@
-import oakFat from "@game/assets/models/holdfast/oak-fat.glb?url";
-import oakRound from "@game/assets/models/holdfast/oak-round.glb?url";
-import pineRound from "@game/assets/models/holdfast/pine-round.glb?url";
-import pineSpire from "@game/assets/models/holdfast/pine-spire.glb?url";
-import pineTall from "@game/assets/models/holdfast/pine-tall.glb?url";
-import { useGLTF } from "@react-three/drei";
+import oakFat from "@spawnite/assets/models/holdfast/oak-fat.glb?url";
+import oakRound from "@spawnite/assets/models/holdfast/oak-round.glb?url";
+import pineRound from "@spawnite/assets/models/holdfast/pine-round.glb?url";
+import pineSpire from "@spawnite/assets/models/holdfast/pine-spire.glb?url";
+import pineTall from "@spawnite/assets/models/holdfast/pine-tall.glb?url";
+import rockBoulder from "@spawnite/assets/models/rock-boulder.glb?url";
+import stumpRound from "@spawnite/assets/models/stump-round.glb?url";
 import { Suspense, useLayoutEffect, useMemo, useRef } from "react";
 import {
     type BufferGeometry,
@@ -13,23 +14,32 @@ import {
     type Object3D,
 } from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { Ground, useWorldEntity } from "@spawnite/engine";
-import { placeTrees, TreeKind, type TreePlace } from "./forest/forestPlaces";
+import { GroundTrait, useModel, useWorldEntity } from "@spawnite/engine";
+import {
+    placeThicket,
+    placeTrees,
+    WoodKind,
+    type WoodPlace,
+} from "./forest/forestPlaces";
 
 //  The wood round the map's edge: pines of three shapes and two broadleaf
 //  trees in clumps and clearings, standing between the playable ground and
-//  the skyline beyond. It is scenery only, with no body, so the Hollow
-//  still walk in through it. Each kind's leaves and bark are one instanced
-//  mesh each, ten draw calls for the wood, and no tree casts a shadow.
+//  the skyline beyond, and the thicket and deadfall on the map's edge. It
+//  is scenery only, with no body, so the Hollow still walk in through it;
+//  the engine's walls at the edge stop a warden where the thicket stands.
+//  Each kind's leaves and its wood or stone are one instanced mesh each,
+//  twelve draw calls for the wood, and nothing in it casts a shadow.
 
-const kindUrls: Record<TreeKind, string> = {
-    [TreeKind.PineTall]: pineTall,
-    [TreeKind.PineRound]: pineRound,
-    [TreeKind.PineSpire]: pineSpire,
-    [TreeKind.OakRound]: oakRound,
-    [TreeKind.OakFat]: oakFat,
+const kindUrls: Record<WoodKind, string> = {
+    [WoodKind.PineTall]: pineTall,
+    [WoodKind.PineRound]: pineRound,
+    [WoodKind.PineSpire]: pineSpire,
+    [WoodKind.OakRound]: oakRound,
+    [WoodKind.OakFat]: oakFat,
+    [WoodKind.Boulder]: rockBoulder,
+    [WoodKind.Stump]: stumpRound,
 };
-const kinds = Object.values(TreeKind);
+const kinds = Object.values(WoodKind);
 
 /** Which part of a tree a mesh is, and so which of its tints it takes. */
 enum TreePart {
@@ -37,12 +47,12 @@ enum TreePart {
     Bark = "bark",
 }
 
-/** One instanced mesh of the wood: a part of one kind, and the trees of
+/** One instanced mesh of the wood: a part of one kind, and the places of
  *  that kind. */
 interface TreeBatch {
     part: TreePart;
     geometry: BufferGeometry;
-    places: TreePlace[];
+    places: WoodPlace[];
 }
 
 /** White, so each tree's own tint is its colour. */
@@ -117,10 +127,10 @@ function TreeBatchMesh({ batch }: TreeBatchMeshProps) {
 }
 
 function Wood() {
-    const surface = useWorldEntity().get(Ground)?.surface;
-    const models = useGLTF(kinds.map((kind) => kindUrls[kind]));
+    const surface = useWorldEntity().get(GroundTrait)?.surface;
+    const models = useModel(kinds.map((kind) => kindUrls[kind]));
     const batches = useMemo(() => {
-        const places = placeTrees(surface);
+        const places = [...placeTrees(surface), ...placeThicket(surface)];
         return kinds.flatMap((kind, index) => {
             const kindPlaces = places.filter((place) => place.kind === kind);
             if (kindPlaces.length === 0) return [];

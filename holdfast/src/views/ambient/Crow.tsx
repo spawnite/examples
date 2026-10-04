@@ -1,5 +1,5 @@
 import { useFrame } from "@react-three/fiber";
-import { useQueryFirst, useTrait, useTraitEffect, useWorld } from "koota/react";
+import { useTraitEffect, useWorld } from "koota/react";
 import { useEffect, useMemo, useRef } from "react";
 import {
     ConeGeometry,
@@ -18,14 +18,14 @@ import {
     type Object3D,
 } from "three";
 import {
-    Ground,
-    ShotResults,
+    GroundTrait,
+    ShotResultsTrait,
     useHeadless,
     useWorldEntity,
 } from "@spawnite/engine";
-import { SiegePhase, SiegeTrait } from "../../siege/traits";
 import { standingStones } from "../layout";
 import { CrowStage, readCrowFlight } from "./crowFlight";
+import { usePhase } from "../phase";
 
 //  A crow on top of a standing stone. It looks about and hops now and then,
 //  and at the run's first shot it springs up and flies off over the forest,
@@ -168,9 +168,8 @@ function isWithin(object: Object3D | null, ancestor: Object3D) {
 
 function Bird() {
     const world = useWorld();
-    const siege = useTrait(useQueryFirst(SiegeTrait), SiegeTrait);
-    const phase = siege?.phase;
-    const surface = useWorldEntity().get(Ground)?.surface;
+    const phase = usePhase();
+    const surface = useWorldEntity().get(GroundTrait)?.surface;
     const birdRef = useRef<Group>(null);
     const headRef = useRef<Group>(null);
     const rightRef = useRef<Group>(null);
@@ -184,16 +183,16 @@ function Bird() {
 
     //  Back on its stone once a run ends, for the next one.
     useEffect(() => {
-        if (phase === SiegePhase.Waiting || phase === SiegePhase.Over)
+        if (phase === "waiting" || phase === "over")
             flightRef.current.tookOff = Infinity;
     }, [phase]);
     //  The last shots the room sent before this page drew the crow are
     //  not a shot it hears.
     const heardAlready = useMemo(
-        () => world.get(ShotResults)?.results,
+        () => world.get(ShotResultsTrait)?.results,
         [world],
     );
-    useTraitEffect(world, ShotResults, (shots) => {
+    useTraitEffect(world, ShotResultsTrait, (shots) => {
         const flight = flightRef.current;
         if (Number.isFinite(flight.tookOff)) return;
         if (!shots?.results.length || shots.results === heardAlready) return;

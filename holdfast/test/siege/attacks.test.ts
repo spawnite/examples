@@ -1,13 +1,18 @@
 // @vitest-environment node
 import type { Entity } from "koota";
 import { afterEach, expect, it } from "vitest";
+import { PhaseMachine } from "../../src/siege/phase";
 import {
     ChaseTrait,
     dealDamage,
+    requireAuthority,
     fixedStepSeconds,
     HealthTrait,
+    InvulnerableTrait,
+    RewindTrait,
+    setRewindStep,
     teleportActor,
-    Transform,
+    TransformTrait,
 } from "@spawnite/engine";
 import {
     boltSpeed,
@@ -19,12 +24,14 @@ import { spawnMonster } from "../../src/siege/monsters";
 import {
     BoltTrait,
     EliteModifier,
-    Mercy,
+    FrozenTrait,
+    MercyTrait,
     MonsterKind,
     MonsterTrait,
-    SiegePhase,
-    SiegeState,
+    SiegeStateTrait,
+    SlamMachine,
     SlamTrait,
+    SpitMachine,
     WardenTrait,
 } from "../../src/siege/traits";
 import {
@@ -39,6 +46,7 @@ import {
     readSiege,
     takePlaces,
     type OpenedSiege,
+    setPhase,
 } from "./room";
 
 let siege: OpenedSiege | undefined;
@@ -62,14 +70,14 @@ interface Move {
 
 /** Stands a warden at a spot on the field at once. */
 function moveWarden(game: OpenedSiege, { warden, x, z = 0 }: Move) {
-    warden.get(Transform)?.copy(onField(x, z));
+    warden.get(TransformTrait)?.copy(onField(x, z));
     teleportActor(game.world, warden);
 }
 
 /** Metres between two entities, level with the ground. */
 function measureApart(one: Entity, other: Entity) {
-    const first = one.get(Transform);
-    const second = other.get(Transform);
+    const first = one.get(TransformTrait);
+    const second = other.get(TransformTrait);
     if (!first || !second) throw new Error("No place.");
     return Math.hypot(first.x - second.x, first.z - second.z);
 }
@@ -80,11 +88,8 @@ it("raises a colossus first on the fifth wave, with the wave's boss health", asy
     const ada = joinWarden(game, { name: "Ada", position: onField() });
     takePlaces(game, ada);
     ada.set(WardenTrait, { health: 1e6, maximum: 1e6 });
-    game.world.queryFirst(SiegeState)?.set(SiegeState, {
-        phase: SiegePhase.Breather,
-        wave: 4,
-        secondsLeft: fixedStepSeconds,
-    });
+    game.world.queryFirst(SiegeStateTrait)?.set(SiegeStateTrait, { wave: 4 });
+    setPhase(game.world, PhaseMachine.is.breather, fixedStepSeconds);
     const risen: MonsterKind[] = [];
     game.world.onAdd(MonsterTrait, (monster: Entity) => {
         const kind = monster.get(MonsterTrait)?.kind;
@@ -137,6 +142,65 @@ it("winds a colossus up before its slam, and hurts only the wardens still in its
     });
 });
 
+/** Steps the siege one fixed step at a time, counting the room's step on
+ *  the world after each, as the room does. */
+function stepAsRoom(game: OpenedSiege, seconds: number) {
+    for (let step = 0; step < Math.round(seconds / fixedStepSeconds); step++) {
+        const at = game.world.get(RewindTrait)?.step ?? 0;
+        game.step(fixedStepSeconds);
+        setRewindStep(game.world, at + 1);
+    }
+}
+
+it("streams the room's step a colossus began its wind-up on, set once", async () => {
+    siege = await openSiege();
+    const game = siege;
+    joinWarden(game, { name: "Ada", position: onField() });
+    const colossus = spawnMonster(game.world, {
+        kind: MonsterKind.Colossus,
+        position: onField(0, -3),
+        plan: planWave(5, 1),
+    });
+    setRewindStep(game.world, 500);
+    let began = -1;
+    while (!colossus.get(SlamTrait)?.winding) {
+        began = game.world.get(RewindTrait)?.step ?? 0;
+        stepAsRoom(game, fixedStepSeconds);
+    }
+    let changes = 0;
+    game.world.onChange(SlamTrait, () => changes++);
+
+    stepAsRoom(game, slamWindUpSeconds / 2);
+
+    expect(colossus.get(SlamTrait)).toMatchObject({
+        winding: true,
+        windUpStep: began,
+    });
+    expect(began).toBeGreaterThanOrEqual(500);
+    expect(changes).toBe(0);
+});
+
+it("moves a frozen colossus's wind-up start on by the steps it stood frozen", async () => {
+    siege = await openSiege();
+    const game = siege;
+    joinWarden(game, { name: "Ada", position: onField() });
+    const colossus = spawnMonster(game.world, {
+        kind: MonsterKind.Colossus,
+        position: onField(0, -3),
+        plan: planWave(5, 1),
+    });
+    while (!colossus.get(SlamTrait)?.winding)
+        stepAsRoom(game, fixedStepSeconds);
+    const began = colossus.get(SlamTrait)?.windUpStep ?? 0;
+
+    colossus.add(FrozenTrait);
+    stepAsRoom(game, 30 * fixedStepSeconds);
+    colossus.remove(FrozenTrait);
+    stepAsRoom(game, fixedStepSeconds);
+
+    expect(colossus.get(SlamTrait)?.windUpStep).toBe(began + 30);
+});
+
 it("lands a slam on a warden in her breath after a blow", async () => {
     siege = await openSiege();
     const game = siege;
@@ -148,10 +212,26 @@ it("lands a slam on a warden in her breath after a blow", async () => {
     });
     game.step(fixedStepSeconds);
 
-    ada.add(Mercy({ seconds: 10 }));
+    ada.add(MercyTrait({ seconds: 10 }));
     game.step(slamWindUpSeconds + 0.1);
 
     expect(readHealth(ada)).toBeLessThan(100);
+});
+
+it("lands no slam on an invulnerable warden", async () => {
+    siege = await openSiege();
+    const game = siege;
+    const ada = joinWarden(game, { name: "Ada", position: onField() });
+    ada.add(InvulnerableTrait);
+    spawnMonster(game.world, {
+        kind: MonsterKind.Colossus,
+        position: onField(0, -3),
+        plan: planWave(5, 1),
+    });
+
+    game.step(fixedStepSeconds + slamWindUpSeconds + 0.1);
+
+    expect(readHealth(ada)).toBe(100);
 });
 
 it("stops a spitter short of her and spits a bolt that hits her where she stands", async () => {
@@ -215,7 +295,7 @@ it("spares a warden a bolt in her breath after a blow", async () => {
     });
     awaitBolt(game);
 
-    ada.add(Mercy({ seconds: 10 }));
+    ada.add(MercyTrait({ seconds: 10 }));
     game.step(spitRangeMetres / boltSpeed + 0.3);
 
     expect(readHealth(ada)).toBe(100);
@@ -227,7 +307,9 @@ it("takes every bolt still flying away when the wave is held", async () => {
     const ada = joinWarden(game, { name: "Ada", position: onField() });
     takePlaces(game, ada);
     game.step(firstBreatherSeconds + 0.1);
-    game.world.queryFirst(SiegeState)?.set(SiegeState, { toSpawn: 0 });
+    game.world
+        .queryFirst(SiegeStateTrait)
+        ?.set(SiegeStateTrait, { toSpawn: 0 });
     for (const monster of game.world.query(MonsterTrait)) monster.destroy();
     spawnMonster(game.world, {
         kind: MonsterKind.Spitter,
@@ -237,10 +319,10 @@ it("takes every bolt still flying away when the wave is held", async () => {
     awaitBolt(game);
 
     for (const monster of game.world.query(MonsterTrait))
-        dealDamage(monster, { amount: 1e6 });
+        dealDamage(requireAuthority(game.world), monster, { amount: 1e6 });
     game.step(fixedStepSeconds * 2);
 
-    expect(readSiege(game.world).phase).toBe(SiegePhase.Breather);
+    expect(readSiege(game.world).phase).toBe(PhaseMachine.is.breather);
     expect(game.world.query(BoltTrait)).toHaveLength(0);
 });
 
@@ -298,7 +380,10 @@ it("bursts a splitting elite into two skitters when it falls", async () => {
         elite: EliteModifier.Splitting,
     });
 
-    dealDamage(splitting, { amount: 1e6, source: ada });
+    dealDamage(requireAuthority(game.world), splitting, {
+        amount: 1e6,
+        source: ada,
+    });
     game.step(fixedStepSeconds);
 
     const left = game.world.query(MonsterTrait);
@@ -309,4 +394,46 @@ it("bursts a splitting elite into two skitters when it falls", async () => {
     ]);
     for (const monster of left)
         expect(monster.get(MonsterTrait)?.elite).toBe(EliteModifier.None);
+});
+
+it("cools a colossus down after its slam, holds its wind-up while it is frozen, and winds up again once cool", async () => {
+    siege = await openSiege();
+    const game = siege;
+    joinWarden(game, { name: "Ada", position: onField(-1.5) });
+    const colossus = spawnMonster(game.world, {
+        kind: MonsterKind.Colossus,
+        position: onField(0, -3),
+        plan: planWave(5, 2),
+    });
+    const { is } = SlamMachine;
+
+    game.step(fixedStepSeconds);
+    expect(colossus.has(is.winding)).toBe(true);
+    colossus.add(FrozenTrait);
+    game.step(slamWindUpSeconds * 2);
+    expect(colossus.has(is.winding)).toBe(true);
+    expect(colossus.get(SlamTrait)?.slams).toBe(0);
+
+    colossus.remove(FrozenTrait);
+    game.step(slamWindUpSeconds);
+    expect(colossus.has(is.cooling)).toBe(true);
+    expect(colossus.get(SlamTrait)?.slams).toBe(1);
+
+    game.step(monsterSettings[MonsterKind.Colossus].cooldown);
+    expect(colossus.has(is.winding)).toBe(true);
+});
+
+it("spits a spitter's first bolt a second after it rises, counting the step it rose on", async () => {
+    siege = await openSiege();
+    const game = siege;
+    joinWarden(game, { name: "Ada", position: onField(0) });
+    const spitter = spawnMonster(game.world, {
+        kind: MonsterKind.Spitter,
+        position: onField(0, -6),
+        plan: planWave(3, 1),
+    });
+    expect(spitter.has(SpitMachine.is.cooling)).toBe(true);
+    expect(spitter.get(SpitMachine.trait)?.waited).toBeCloseTo(
+        fixedStepSeconds,
+    );
 });

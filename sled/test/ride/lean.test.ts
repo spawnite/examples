@@ -1,14 +1,15 @@
 // @vitest-environment node
 import { Vector2 } from "three";
-import { expect, it } from "vitest";
+import { expect } from "vitest";
 import { sendInput, stepSeconds, TrackMoverTrait } from "@spawnite/engine/core";
 import { LeanTrait } from "../../src/ride/lean";
 import { releaseSling } from "../../src/ride/sling";
 import { frames, startRide } from "./rider";
+import { it } from "@spawnite/engine/testing";
 
 //  Old Lean.test, with the run end's freeze as what it did to the lean.
-it("rolls into the steer only while it is enabled", async () => {
-    const { game, rider } = await startRide();
+it("rolls into the steer only while it is enabled", async ({ createGame }) => {
+    const { game, rider } = await startRide(createGame);
     releaseSling(rider);
     sendInput(game, { intent: new Vector2(1, 0), steering: true });
     rider.set(LeanTrait, { enabled: false });

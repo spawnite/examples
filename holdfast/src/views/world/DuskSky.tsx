@@ -1,52 +1,22 @@
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import {
     BackSide,
     Color,
     ShaderMaterial,
     SphereGeometry,
-    Mesh,
-    type Object3D,
+    type Mesh,
+    Vector3,
 } from "three";
 import { duskAir, duskSun } from "./air";
+import { nightSky } from "./night";
 
-//  The dusk sky: deep blue overhead, violet lower down, a warm band along
-//  the horizon that burns orange toward the low sun, the sun's disc and its
-//  halo, thin clouds lit from below, and the first stars. Drawn first and
-//  behind everything, round the camera, in place of the rig's own painted
-//  domes, cloud decks and scattering sky, which read as afternoon.
-
-/** The engine rig's own sky, by the names its meshes carry, and its sky
- *  shader's: hidden while this sky stands.
- *  ponytail: reaches into the rig by name; a look that can leave out the
- *  rig's sky would lift it. */
-const rigSkyNames = new Set([
-    "skyTint",
-    "skyCloudsFar",
-    "skyCloudsNear",
-    "skyBand",
-]);
-const rigSkyShader = "SkyShader";
-
-function isRigSky(object: Object3D) {
-    if (rigSkyNames.has(object.name)) return true;
-    return (
-        object instanceof Mesh &&
-        !Array.isArray(object.material) &&
-        object.material.name === rigSkyShader
-    );
-}
-
-/** The rig's sky as last found, gathered in place. */
-const rigSky: Object3D[] = [];
-function collectRigSky(object: Object3D) {
-    if (isRigSky(object)) rigSky.push(object);
-}
-function isInScene(object: Object3D) {
-    return object.parent !== null;
-}
-/** Frames between two searches for a rig sky not found or remounted. */
-const searchFrames = 30;
+//  The night sky: deep blue overhead, violet lower down, a warm band along
+//  the horizon that burns toward the sun, the sun's disc and its halo, thin
+//  clouds lit from below, the stars and the moon. Its colours, its sun and
+//  its moon follow the night's clock, from dusk to sunrise. Drawn first and
+//  behind everything, round the camera, where the World draws no sky of its
+//  own.
 
 /** Metres to the dome: inside the camera's far plane, past the skyline. */
 const domeRadius = 400;
@@ -66,10 +36,14 @@ varying vec3 vSkyDirection;
 uniform vec3 uZenith;
 uniform vec3 uHigh;
 uniform vec3 uHorizon;
+uniform vec3 uAir;
 uniform vec3 uBurn;
 uniform vec3 uSunColor;
 uniform vec3 uSun;
 uniform vec3 uCloud;
+uniform float uStars;
+uniform vec3 uMoon;
+uniform float uMoonLight;
 
 float hashSky(vec2 cell) {
     return fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453);
@@ -111,7 +85,7 @@ void main() {
     float bandHeight = mix(0.12, 0.3, pow(toward, 2.0));
     color = mix(band, color, smoothstep(0.0, bandHeight, up));
     // Below the horizon, the air the fog fades the ground into.
-    color = mix(color, uHorizon, smoothstep(0.02, -0.08, up));
+    color = mix(color, uAir, smoothstep(0.02, -0.08, up));
 
     // Thin clouds, stretched along the horizon, lit warm from below near
     // the sun and dark against it elsewhere.
@@ -127,10 +101,22 @@ void main() {
     float disc = smoothstep(0.9993, 0.9996, sunAngle);
     color += uSunColor * (halo * (1.0 - cloud * 0.6) + disc * 3.0);
 
-    // The first stars, high and away from the sun.
+    // The stars, away from the sun: a few high ones at dusk, the whole sky
+    // of them at midnight, a dimmer second field between the bright ones.
     vec2 starCell = floor(direction.xz / max(up, 0.2) * 90.0);
-    float star = step(0.9965, hashSky(starCell)) * smoothstep(0.35, 0.8, up) * (1.0 - toward);
-    color += vec3(star) * 0.6 * (1.0 - cloud);
+    float starHeight = smoothstep(mix(0.35, 0.08, clamp(uStars - 0.5, 0.0, 1.0)), 0.8, up);
+    float star = step(0.9965, hashSky(starCell)) * starHeight * (1.0 - toward * 0.8);
+    vec2 faintCell = floor(direction.xz / max(up, 0.2) * 170.0);
+    float faint = step(0.993, hashSky(faintCell + 31.0)) * starHeight * 0.45;
+    color += (vec3(star) * 0.6 + vec3(0.75, 0.8, 1.0) * faint * clamp(uStars - 0.6, 0.0, 1.0))
+        * uStars * (1.0 - cloud);
+
+    // The moon: a pale disc with a soft halo, dimmed by the cloud before it.
+    float moonAngle = dot(direction, normalize(uMoon));
+    float moonDisc = smoothstep(0.99955, 0.99975, moonAngle);
+    float moonHalo = pow(max(moonAngle, 0.0), 60.0) * 0.18;
+    color += vec3(0.86, 0.9, 1.0) * (moonDisc * 1.6 + moonHalo) * uMoonLight * (1.0 - cloud * 0.7)
+        * smoothstep(-0.02, 0.04, up);
 
     gl_FragColor = vec4(color, 1.0);
     #include <tonemapping_fragment>
@@ -145,10 +131,14 @@ function createSkyMaterial() {
             uZenith: { value: new Color("#0d1330") },
             uHigh: { value: new Color("#2c2f5e") },
             uHorizon: { value: new Color(duskAir.color) },
+            uAir: { value: new Color(duskAir.color) },
             uBurn: { value: new Color("#e8794a") },
             uSunColor: { value: new Color("#ffc58a") },
-            uSun: { value: duskSun },
+            uSun: { value: duskSun.clone() },
             uCloud: { value: new Color("#232642") },
+            uStars: { value: 0.5 },
+            uMoon: { value: new Vector3(0, -1, 0) },
+            uMoonLight: { value: 0 },
         },
         side: BackSide,
         depthWrite: false,
@@ -167,28 +157,22 @@ export function DuskSky() {
         },
         [geometry, material],
     );
-    const scene = useThree((state) => state.scene);
-    const frameRef = useRef(0);
-    useLayoutEffect(
-        () => () => {
-            for (const object of rigSky) object.visible = true;
-            rigSky.length = 0;
-        },
-        [scene],
-    );
-    //  Round the camera wherever it goes, so the sky has no near edge; and
-    //  the rig's sky, searched for now and then until every part is found
-    //  and again once one has left the scene, held hidden.
+    //  Round the camera wherever it goes, so the sky has no near edge, in
+    //  the night's colours.
     useFrame(({ camera }) => {
         meshRef.current?.position.copy(camera.position);
-        const complete =
-            rigSky.length === rigSkyNames.size + 1 && rigSky.every(isInScene);
-        if (!complete && frameRef.current++ % searchFrames === 0) {
-            for (const object of rigSky) object.visible = true;
-            rigSky.length = 0;
-            scene.traverse(collectRigSky);
-        }
-        for (const object of rigSky) object.visible = false;
+        const { uniforms } = material;
+        uniforms.uZenith.value.copy(nightSky.zenith);
+        uniforms.uHigh.value.copy(nightSky.high);
+        uniforms.uHorizon.value.copy(nightSky.horizon);
+        uniforms.uAir.value.copy(nightSky.air);
+        uniforms.uBurn.value.copy(nightSky.burn);
+        uniforms.uSunColor.value.copy(nightSky.sun);
+        uniforms.uSun.value.copy(nightSky.sunDirection);
+        uniforms.uCloud.value.copy(nightSky.cloud);
+        uniforms.uStars.value = nightSky.stars;
+        uniforms.uMoon.value.copy(nightSky.moonDirection);
+        uniforms.uMoonLight.value = nightSky.moon;
     });
     return (
         <mesh

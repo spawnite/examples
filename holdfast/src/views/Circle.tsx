@@ -1,23 +1,25 @@
 import { useFrame } from "@react-three/fiber";
-import { useQueryFirst, useTrait } from "koota/react";
+import { useWorld } from "koota/react";
 import { Suspense, useRef } from "react";
 import { Color, PlaneGeometry, type PointLight } from "three";
 import {
     BodyKind,
     ColliderShape,
     Entity,
-    Ground,
+    GroundTrait,
     Shader,
     useHeadless,
     useTime,
     useWorldEntity,
     type Position,
 } from "@spawnite/engine";
-import { SiegePhase, SiegeTrait } from "../siege/traits";
+import { PhaseTrait, readPhase } from "../siege/phase";
 import { HearthModel } from "./circle/HearthModel";
 import { StoneModel } from "./circle/StoneModel";
 import { runeUniforms } from "./circle/stoneMaterial";
-import { standingStones } from "./layout";
+import { HearthWarmth, hearthGrowth, hearthWarmth } from "./circle/warmth";
+import { ringMetres, standingStones } from "./layout";
+import { useWelcomed } from "./welcomed";
 
 //  The stone circle the wardens hold: a ring of standing stones whose runes
 //  burn blue between waves and red while one is fought, and the hearth at
@@ -29,10 +31,10 @@ import { standingStones } from "./layout";
  *  on the flagstones: flat discs drawn with light that fades outward. */
 const poolGeometry = new PlaneGeometry(1, 1);
 
-const restColor = new Color("#6cc8f2");
-//  A little green and blue in the red keeps every channel above zero through
-//  the look's saturation grade, which drives a purer red's blue negative and
-//  draws the rune black.
+const restColor = new Color("#3aa8f8");
+//  A little green and blue in the red lets the rune's brightest strokes burn
+//  toward white under the tone mapping, as a hot light does; a pure red
+//  stays a deep red at any brightness, and draws a darker rune.
 const fightColor = new Color("#ff5046");
 const fireColor = new Color("#ff7a2e");
 /** The runes' colour on the ground, shared by every stone's pool. */
@@ -46,15 +48,21 @@ void main() {
     gl_FragColor = vec4(uColor * uStrength, glow);
 }`;
 
-/** Every rune's colour and pulse, eased toward the siege's phase. */
+/** Every rune's colour and pulse, eased toward the siege's phase, and
+ *  on the phase at once after a welcome. The phase is read in the frame,
+ *  which may come before the render a welcome starts. */
 function RuneGlow() {
-    const siege = useTrait(useQueryFirst(SiegeTrait), SiegeTrait);
-    const fighting = siege?.phase === SiegePhase.Fight;
+    const world = useWorld();
+    const isWelcomed = useWelcomed();
     useFrame((_, delta) => {
+        const fighting = readPhase(world.queryFirst(PhaseTrait)) === "fight";
         const seconds = useTime.getState().seconds;
         const color = runeUniforms.uRuneColor.value;
-        color.lerp(fighting ? fightColor : restColor, Math.min(delta * 2, 1));
-        runeUniforms.uRunePower.value = 2.6 + Math.sin(seconds * 1.5) * 0.9;
+        color.lerp(
+            fighting ? fightColor : restColor,
+            isWelcomed() ? 1 : Math.min(delta * 2, 1),
+        );
+        runeUniforms.uRunePower.value = 1.6 + Math.sin(seconds * 1.5) * 0.4;
         runeUniforms.uTime.value = seconds;
         poolColor.copy(color);
     });
@@ -67,20 +75,37 @@ interface StandingStoneProps {
     yaw: number;
 }
 
-/** One standing stone, facing the middle, its runes on its inner face. */
+/** The capsule a standing stone stands in: as wide as the drawn stone and
+ *  as tall as the shortest, so a shot or the camera's sweep at the heights
+ *  she fights at meets it.
+ *  ponytail: a capsule narrows to a point at its ends, so it is full width
+ *  only from 0.55 m to 2.65 m and misses the taller stones' tops up to
+ *  3.9 m; a box or a hull from the drawn model would cover the whole
+ *  stone. */
+const stoneCollider = { width: 1.1, height: 3.2 };
+
+/** One standing stone, facing the middle, its runes on its inner face.
+ *  The entity stands at the capsule's middle, which a collider is centred
+ *  on, and the drawing back down on the ground. */
 function StandingStone({ index, position, yaw }: StandingStoneProps) {
     const headless = useHeadless();
+    const [x, ground, z] = position;
+    const lift = stoneCollider.height / 2;
     return (
         <Entity
-            position={position}
+            position={[x, ground + lift, z]}
             collider={{
                 shape: ColliderShape.Capsule,
                 kind: BodyKind.Fixed,
-                size: [1.1, 2.8, 1.1],
+                size: [
+                    stoneCollider.width,
+                    stoneCollider.height,
+                    stoneCollider.width,
+                ],
             }}
         >
             {!headless && (
-                <group rotation-y={yaw}>
+                <group rotation-y={yaw} position-y={-lift}>
                     <Suspense fallback={null}>
                         <StoneModel index={index} />
                     </Suspense>
@@ -102,14 +127,23 @@ function StandingStone({ index, position, yaw }: StandingStoneProps) {
     );
 }
 
+/** The fire's light: a slow falloff, so its warmth reaches the ring where
+ *  the fighting is rather than a pool round the logs, and a reach past the
+ *  ring's outer edge. At the ring it is about twice what a decay of 1.3
+ *  gave, and within 2 m of the logs about the same. */
+const fireCandela = 24;
+const fireDecay = 1;
+const fireReach = ringMetres.radius + ringMetres.halfWidth + 18;
+
 interface HearthProps {
     /** The ground's height under the fire, which the drawn pit sits on. */
     floor: number;
 }
 
 /** The fire: a ring of stones, logs, flames, and a warm light that
- *  flickers. The light mounts with the hearth, before its models load, so
- *  the scene's light count never changes. */
+ *  flickers, stronger while the hearth warms the wardens between waves. The light stands outside the hearth's entity, which a room's
+ *  page mounts only once the room streams it: a light that arrives changes
+ *  every lit shader, so this one is in the scene from its first frame. */
 function Hearth({ floor }: HearthProps) {
     const headless = useHeadless();
     const lightRef = useRef<PointLight>(null);
@@ -122,53 +156,62 @@ function Hearth({ floor }: HearthProps) {
             Math.sin(now * 7.3) * 0.5 +
             Math.sin(now * 13.1 + 1.7) * 0.3 +
             Math.sin(now * 23.7 + 0.4) * 0.2;
-        light.intensity = 30 + flicker * 5;
+        light.intensity =
+            (fireCandela + flicker * 4) *
+            (1 + hearthWarmth.value * 0.5) *
+            (0.6 + hearthGrowth.size * 0.4);
+        light.distance = fireReach * (0.8 + hearthGrowth.size * 0.2);
         light.position.x = Math.sin(now * 5.1) * 0.06;
         light.position.z = Math.cos(now * 4.3) * 0.06;
     });
     return (
-        <Entity
-            name="hearth"
-            collider={{
-                shape: ColliderShape.Sphere,
-                kind: BodyKind.Fixed,
-                size: [2.4, 2.4, 2.4],
-            }}
-        >
+        <>
             {!headless && (
-                <group position-y={floor}>
-                    <Suspense fallback={null}>
-                        <HearthModel />
-                    </Suspense>
-                    <pointLight
-                        ref={lightRef}
-                        position-y={1.4}
-                        color="#ff8a3d"
-                        intensity={30}
-                        distance={30}
-                        decay={1.3}
-                    />
-                    <mesh
-                        geometry={poolGeometry}
-                        position-y={0.05}
-                        rotation-x={-Math.PI / 2}
-                        scale={9}
-                    >
-                        <Shader
-                            fragment={poolFragment}
-                            uniforms={{ uColor: fireColor, uStrength: 0.8 }}
-                            transparent
-                        />
-                    </mesh>
-                </group>
+                <pointLight
+                    ref={lightRef}
+                    position-y={floor + 1.4}
+                    color="#ff8a3d"
+                    intensity={fireCandela}
+                    distance={fireReach}
+                    decay={fireDecay}
+                />
             )}
-        </Entity>
+            <Entity
+                name="hearth"
+                collider={{
+                    shape: ColliderShape.Sphere,
+                    kind: BodyKind.Fixed,
+                    size: [2.4, 2.4, 2.4],
+                }}
+            >
+                {!headless && (
+                    <group position-y={floor}>
+                        <Suspense fallback={null}>
+                            <HearthModel />
+                        </Suspense>
+                        <HearthWarmth />
+                        <mesh
+                            geometry={poolGeometry}
+                            position-y={0.05}
+                            rotation-x={-Math.PI / 2}
+                            scale={9}
+                        >
+                            <Shader
+                                fragment={poolFragment}
+                                uniforms={{ uColor: fireColor, uStrength: 0.8 }}
+                                transparent
+                            />
+                        </mesh>
+                    </group>
+                )}
+            </Entity>
+        </>
     );
 }
 
 /** The hearth and the stones, each stood on the map's ground. */
 export function Circle() {
-    const surface = useWorldEntity().get(Ground)?.surface;
+    const surface = useWorldEntity().get(GroundTrait)?.surface;
     const headless = useHeadless();
     return (
         <>

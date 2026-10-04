@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQueryFirst } from "koota/react";
-import { Ground, Hero, Ref, useLoading, useTime } from "@spawnite/engine";
+import {
+    GroundTrait,
+    HeroTrait,
+    RefTrait,
+    useLoading,
+    useTime,
+} from "@spawnite/engine";
 
 /** True from the moment the meadow and her model are drawn, the loaders
  *  are idle and the loop runs, and from then on. `loading` alone reads idle
@@ -12,8 +18,8 @@ import { Ground, Hero, Ref, useLoading, useTime } from "@spawnite/engine";
  *  it has. */
 export function useSceneLoaded() {
     const loading = useLoading((state) => state.loading);
-    const drawnHero = useQueryFirst(Hero, Ref);
-    const drawnGround = useQueryFirst(Ground, Ref);
+    const drawnHero = useQueryFirst(HeroTrait, RefTrait);
+    const drawnGround = useQueryFirst(GroundTrait, RefTrait);
     const running = useTime((state) => state.running);
     const [loaded, setLoaded] = useState(false);
 

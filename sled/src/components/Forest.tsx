@@ -1,31 +1,24 @@
 import { useMemo } from "react";
-import { useGLTF } from "@react-three/drei";
 import { Color, type BufferGeometry } from "three";
 import {
-    extendGltfLoader,
     hashKeys,
     registerModel,
     TrackScatter,
     type TrackScatterCopy,
     type TrackScatterRow,
+    useModel,
 } from "@spawnite/engine";
-import conifer from "@game/assets/models/sled/conifer.glb?url";
-import spruce from "@game/assets/models/sled/spruce.glb?url";
 import type { Run, TreeDef } from "../levels";
+import { desert, snow, type PropStand } from "../maps";
 import { wallLip } from "../track/profile";
 
-/** The species and how often each is drawn. */
-const species = { conifer, spruce };
-const weights = { conifer: 0.75, spruce: 0.25 };
-for (const [name, url] of Object.entries(species)) {
-    registerModel(name, url);
-    //  Both at once: each batch alone would start its file when it mounts.
-    useGLTF.preload(url, false, undefined, extendGltfLoader);
-}
+for (const stand of [...snow.props, ...desert.props])
+    for (const [name, { url }] of Object.entries(stand.models))
+        registerModel(name, url);
 /** Metres a row keeps clear of an authored tree. */
 const heroClear = 4;
-/** Metres tall an authored tree stands when it names no scale: both
- *  models are a metre tall, so the height in metres is the scale. */
+/** Metres tall an authored tree stands when it names no scale: every
+ *  model is about a metre tall, so the height in metres is the scale. */
 const heroScale = 3;
 /** Rows a side, in metres out from the start of the band, and the metres
  *  between their trees: a treeline close in, a scattered stand further out
@@ -35,13 +28,12 @@ const rows = [0, 4, 8.5, 14, 20, 26.5, 34, 42, 50, 62, 78, 96, 116, 136];
 const rowSpacing = [4, 4.5, 5, 6, 7.5, 9, 10.5, 12, 13.5, 18, 22, 26, 32, 40];
 /** Metres the band starts past the fence. */
 const bandIn = 1.5;
-/** A row tree's width in metres, its height as a multiple of that, how
- *  far it wanders across its row, and the share of its cell it may slide
- *  along. */
+/** How far a row tree wanders across its row, the share of its cell it
+ *  may slide along, and its height as a multiple of its width; its stand
+ *  gives its width in metres. */
 const row = {
     jitter: 1.6,
     slide: 0.7,
-    size: [3.4, 6.8],
     stretch: [0.95, 1.35],
 } satisfies Partial<TrackScatterRow>;
 /** Each tree's brightness, and how far its green drifts: what makes them
@@ -63,32 +55,61 @@ interface ForestProps {
     trees: TreeDef[];
 }
 
-/** The level's authored trees, and rows each side from past the fence up
- *  the hillside, stepping round them.
+/** The rows of one stand each side, from past the fence up the hillside.
+ *  A stand after the first shifts its rows along by its share of a cell,
+ *  so two stands interleave rather than stand on each other. */
+function placeRows(stand: PropStand, index: number, stands: number) {
+    return [-1, 1].flatMap((side) =>
+        rows.map((out, rowIndex): TrackScatterRow => ({
+            ...row,
+            size: stand.size,
+            from: side < 0 ? "left" : "right",
+            across: side * (wallLip + bandIn + out),
+            spacing: rowSpacing[rowIndex],
+            start: (rowSpacing[rowIndex] * index) / stands,
+        })),
+    );
+}
+
+/** The level's authored trees, and the map's stands in rows each side
+ *  from past the fence up the hillside, stepping round them.
  *  ponytail: every tree at full detail and never culled, about 210 on
  *  level 1; the old sled swaps in a decimated model past 60 m, chunk by
- *  chunk, which a longer level earns. */
+ *  chunk, which a longer level earns, and the models' -far files wait. */
 export function Forest({ run, ground, trees }: ForestProps) {
-    const placements = useMemo(
-        () => [
-            ...trees.map(({ at, side, scale }): TrackScatterCopy => ({
-                at,
-                across: side,
-                scale: scale ?? heroScale,
+    const { props } = run.map;
+    const stands = useMemo(
+        () =>
+            props.map((stand, index) => ({
+                weights: Object.fromEntries(
+                    Object.entries(stand.models).map(([name, { weight }]) => [
+                        name,
+                        weight,
+                    ]),
+                ),
+                placements: [
+                    ...(index === 0
+                        ? trees.map(
+                              ({ at, side, scale }): TrackScatterCopy => ({
+                                  at,
+                                  across: side,
+                                  scale: scale ?? heroScale,
+                              }),
+                          )
+                        : []),
+                    ...placeRows(stand, index, props.length),
+                ],
             })),
-            ...[-1, 1].flatMap((side) =>
-                rows.map((out, index): TrackScatterRow => ({
-                    ...row,
-                    from: side < 0 ? "left" : "right",
-                    across: side * (wallLip + bandIn + out),
-                    spacing: rowSpacing[index],
-                })),
-            ),
-        ],
-        [trees],
+        [props, trees],
     );
-    return (
+    //  Every file at once: each batch alone would start its file when it
+    //  mounts.
+    for (const stand of props)
+        for (const { url } of Object.values(stand.models))
+            useModel.preload(url);
+    return stands.map(({ weights, placements }, index) => (
         <TrackScatter
+            key={index}
             track={run.track}
             surface={ground}
             models={weights}
@@ -96,5 +117,5 @@ export function Forest({ run, ground, trees }: ForestProps) {
             clear={heroClear}
             tint={tint}
         />
-    );
+    ));
 }

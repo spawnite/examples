@@ -1,5 +1,5 @@
 import { StrictMode, Suspense, lazy } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { openingModels } from "@spawnite/engine";
 import { AppErrorBoundary } from "./app/AppErrorBoundary";
 import { avatars, heroAvatarId } from "./avatars";
@@ -12,7 +12,13 @@ const App = lazy(async () => ({ default: (await import("./app/App")).App }));
 const container = document.getElementById("root");
 if (!container) throw new Error("index.html has no #root");
 
-createRoot(container).render(
+//  A hot update that reaches this module runs it again, so it renders into
+//  the root it made the first time: a second root on the same element
+//  would fight the first for its children.
+const root: Root = import.meta.hot?.data.root ?? createRoot(container);
+if (import.meta.hot) import.meta.hot.data.root = root;
+
+root.render(
     <StrictMode>
         <AppErrorBoundary>
             <Suspense>

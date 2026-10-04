@@ -1,117 +1,107 @@
 import { createQuery, type Entity, type World } from "koota";
-import { Vector3 } from "three";
+import type { Vector3 } from "three";
 import {
-    readEach,
-    Transform,
-    Wallet,
-    type StepOptions,
+    emitEvent,
+    findEntity,
+    roundTo,
+    WalletTrait,
 } from "@spawnite/engine/core";
-import { drawRandom } from "./random";
 import { readWardenStat, WardenStat } from "./stats";
-import { CoinScatter, CoinTrait, Lifetime, WardenTrait } from "./traits";
-import { queryStandingWardens } from "./wardens";
+import {
+    type CoinBurst,
+    CoinBurstsTrait,
+    LedgerTrait,
+    SiegeTrait,
+    WardenTrait,
+} from "./traits";
+import { queryWardens } from "./wardens";
 
-//  Coins: dropped where a monster falls, pulled to a warden who comes near,
-//  and counted into her wallet: the personal score.
+//  Coins: every warden earns every coin, and each spends her own. A
+//  monster's coins go to every warden in the room as it dies, each share
+//  the drop over the crowd factor, so each earns about what a solo player
+//  would, as Risk of Rain 2 splits its gold among the team. Each page
+//  draws the coins popping from the monster and flying to each warden.
 
-/** Metres from a warden inside which a coin flies to her. */
-const pullMetres = 3.5;
-/** Metres a second a pulled coin flies. */
-const pullSpeed = 10;
-/** Metres from her middle at which a coin is hers. */
-const takeMetres = 0.6;
-/** Seconds a coin lies before it fades. */
-const coinSeconds = 25;
-/** Metres a dropped coin lands from where the monster fell, at most. */
-const scatterMetres = 1;
-/** Coins one fall scatters, at most; a richer monster's are worth more. */
-const mostCoins = 4;
-/** Metres above the ground a coin floats. */
-const floatMetres = 0.5;
-/** Seconds before it goes at which a coin starts to blink. */
-const fadingSeconds = 4;
-
-//  Written in place for each coin.
-const toward = new Vector3();
-
-/** Coins' worth dropped at a place. */
+/** Coins' worth a monster drops at a place. */
 interface CoinDrop {
     position: Vector3;
     value: number;
 }
 
-/** Scatters `value` coins' worth round `position`, a few coins at most. */
-export function dropCoins(world: World, { position, value }: CoinDrop) {
-    if (!world.has(CoinScatter)) world.add(CoinScatter);
-    const scatter = world.get(CoinScatter);
-    if (!scatter) return;
-    const count = Math.min(value, mostCoins);
-    for (let index = 0; index < count; index++) {
-        const share =
-            Math.floor(value / count) + (index < value % count ? 1 : 0);
-        const angle = drawRandom(scatter) * Math.PI * 2;
-        const distance = drawRandom(scatter) * scatterMetres;
-        world.spawn(
-            Transform(
-                new Vector3(
-                    position.x + Math.sin(angle) * distance,
-                    position.y + floatMetres,
-                    position.z + Math.cos(angle) * distance,
-                ),
-            ),
-            CoinTrait({ value: share }),
-            Lifetime({ seconds: coinSeconds }),
-        );
-    }
+/** What a drop is divided by with `wardens` in the room: 1 alone, and 0.6
+ *  more for each warden past the first, as a wave's count grows. */
+export function measureCrowdFactor(wardens: number) {
+    return 1 + 0.6 * (Math.max(1, wardens) - 1);
 }
 
-/** Credits `value` coins to the warden, times her coin value, carrying
- *  what falls short of a whole coin to the next. */
+/** Whole coins one burst draws at most: a colossus's share flies as a
+ *  handful, each worth more. */
+export const mostBurstCoins = 6;
+
+const sieges = createQuery(SiegeTrait);
+
+/** Adds `burst` to the step's coin bursts on the siege. */
+function addCoinBurst(world: World, burst: CoinBurst) {
+    const siege = findEntity(world, sieges);
+    if (!siege) return;
+    emitEvent(siege, CoinBurstsTrait, (held) => {
+        held.bursts.push(burst);
+        return held;
+    });
+}
+
+/** Her ledger, added where she has none. */
+export function readLedger(warden: Entity) {
+    if (!warden.has(LedgerTrait)) warden.add(LedgerTrait);
+    return warden.get(LedgerTrait) ?? LedgerTrait.schema;
+}
+
+/** Credits `value` coins to `warden`, times her coin value, carrying what
+ *  falls short of a whole coin to the next, and returns the whole coins
+ *  her wallet took. */
 function creditCoins(warden: Entity, value: number) {
     const survivor = warden.get(WardenTrait);
-    if (!survivor) return;
+    if (!survivor) return 0;
     const earned =
         value * readWardenStat(warden, WardenStat.CoinValue) +
         survivor.coinRemainder;
     const whole = Math.floor(earned);
     warden.set(WardenTrait, { coinRemainder: earned - whole });
-    if (!warden.has(Wallet)) warden.add(Wallet);
-    warden.set(Wallet, (wallet) => ({ coins: wallet.coins + whole }));
+    if (whole === 0) return 0;
+    if (!warden.has(WalletTrait)) warden.add(WalletTrait);
+    warden.set(WalletTrait, (wallet) => ({ coins: wallet.coins + whole }));
+    const ledger = readLedger(warden);
+    warden.set(LedgerTrait, { earned: ledger.earned + whole });
+    return whole;
 }
 
-const coins = createQuery(CoinTrait, Transform, Lifetime);
+/** Pays every warden in the room her share of the `value` coins a monster
+ *  dropped at `position`, down or dropped or sheltered alike, and adds a
+ *  burst for each whole coin share, which each page flies to her. */
+export function shareCoins(world: World, { position, value }: CoinDrop) {
+    const wardens = queryWardens(world);
+    if (wardens.length === 0) return;
+    const share = value / measureCrowdFactor(wardens.length);
+    for (const warden of wardens) {
+        const coins = creditCoins(warden, share);
+        if (coins > 0)
+            addCoinBurst(world, {
+                to: warden,
+                x: roundTo(position.x, 2),
+                y: roundTo(position.y, 2),
+                z: roundTo(position.z, 2),
+                coins,
+            });
+    }
+}
 
-/** Pulls each coin toward the nearest warden within reach and gives it to
- *  her once it reaches her, and marks one about to go. */
-export function gatherCoins(world: World, { deltaSeconds }: StepOptions) {
-    readEach(world, coins, ([settings, position, lifetime], coin) => {
-        let taker: Entity | undefined;
-        let nearest = pullMetres;
-        for (const warden of queryStandingWardens(world)) {
-            const feet = warden.get(Transform);
-            if (!feet) continue;
-            const distance = toward
-                .set(feet.x, feet.y + floatMetres, feet.z)
-                .distanceTo(position);
-            if (distance < nearest) {
-                nearest = distance;
-                taker = warden;
-            }
-        }
-        const feet = taker?.get(Transform);
-        if (taker && feet) {
-            if (nearest <= takeMetres) {
-                creditCoins(taker, settings.value);
-                coin.destroy();
-                return;
-            }
-            toward
-                .set(feet.x, feet.y + floatMetres, feet.z)
-                .sub(position)
-                .setLength(Math.min(pullSpeed * deltaSeconds, nearest));
-            position.add(toward);
-        }
-        const fading = lifetime.seconds < fadingSeconds;
-        if (fading !== settings.fading) coin.set(CoinTrait, { fading });
-    });
+/** Takes `price` coins from her wallet, where it holds them, and counts
+ *  them spent; false, taking nothing, where it does not. */
+export function spendCoins(warden: Entity, price: number) {
+    const coins = warden.get(WalletTrait)?.coins ?? 0;
+    if (price > coins) return false;
+    warden.set(WalletTrait, { coins: coins - price });
+    const ledger = readLedger(warden);
+    warden.set(LedgerTrait, { spent: ledger.spent + price });
+    return true;
 }

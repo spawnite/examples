@@ -3,10 +3,39 @@
     game names it. */
 @import "@spawnite/ui/styles.css";
 
-/*  A game restyles the house palette by overriding its tokens, listed in
-    ui's stylesheet, on :root. Not in @theme: this file is not a Tailwind
-    root, so an @theme here reaches the browser unread. This one turns the
-    health fill sky blue. */
+/*  Game fills its parent, so the page's root takes the whole screen. */
+#root {
+    height: 100dvh;
+}
+
+/*  A game restyles the house palette by overriding its tokens on :root;
+    the wiki's theme page lists every one. Not in @theme: this file is not
+    a Tailwind root, so an @theme here reaches the browser unread. This one
+    turns the health fill sky blue and leaves the rest at their defaults,
+    named here so the knobs are in view. */
 :root {
     --color-health-fill: oklch(74.6% 0.16 232.661);
+    /* --color-health-track: emerald-950, a Bar's track */
+    /* --color-health-loss: white, the piece a blow just took */
+    /* --color-danger: red-400, a readout past a limit */
+    /* --color-menu-surface: rgb(12 14 20 / 88%), a menu's pane, a quiet button */
+    /* --color-menu-raised: rgb(255 255 255 / 7%), a control at rest in a menu */
+    /* --color-menu-edge: rgb(255 255 255 / 14%), a pane's hairline edge */
+    /* --color-menu-muted: rgb(255 255 255 / 58%), secondary text in a menu */
+    /* --color-menu-accent: white, what is on or chosen, a primary button */
+    /* --color-menu-accent-ink: neutral-950, text on the accent */
+    /* --color-loading-background: neutral-950, the loading screen's field */
+    /* --color-loading-label: neutral-400, its muted words */
+    /* --color-loading-indicator: neutral-200, its marks */
+    /* --color-loading-bar: neutral-200, the loading bar's fill */
+    /* --color-loading-track: rgb(255 255 255 / 14%), its track */
+    /* --color-loading-text: neutral-100, its text */
+    /* --color-stick-ring: rgb(255 255 255 / 70%), the Joystick's ring */
+    /* --color-stick-knob: rgb(255 255 255 / 90%), its knob */
+    /* --color-reading-good: emerald-400, a performance reading in budget */
+    /* --color-reading-warn: amber-400, one near it */
+    /* --color-reading-bad: red-400, one past it */
+    /* --color-voice-speaking: emerald-400, the microphone's level */
+    /* --color-voice-muted: red-500, the slash across a muted microphone */
+    /* --font-display: the sans face, titles and big numbers */
 }

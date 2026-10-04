@@ -4,7 +4,7 @@
     "cell": 1,
     "hills": {
         "amplitude": 9,
-        "wavelength": 26,
+        "wavelength": 40,
         "detail": 0.45
     },
     "scatter": {
@@ -20,7 +20,7 @@
         "circle": {
             "center": [0, 0],
             "radius": 32,
-            "fade": 5,
+            "fade": 12,
             "hills": {
                 "amplitude": 0.5,
                 "wavelength": 18,
@@ -35,6 +35,86 @@
                 "grassTuft": 0.6,
                 "seedOffset": 1,
                 "clearing": 5.5
+            }
+        },
+        "northPass": {
+            "center": [0, -42],
+            "radius": 6,
+            "fade": 9,
+            "hills": {
+                "amplitude": 1.2,
+                "wavelength": 18,
+                "detail": 0
+            },
+            "scatter": {
+                "treeRound": 0,
+                "treeTall": 0,
+                "bushRound": 0.5,
+                "rockBoulder": 0.5,
+                "rockFlat": 0.6,
+                "grassTuft": 0.8,
+                "seedOffset": 2,
+                "clearing": 0
+            }
+        },
+        "eastPass": {
+            "center": [42, 0],
+            "radius": 6,
+            "fade": 9,
+            "hills": {
+                "amplitude": 1.2,
+                "wavelength": 18,
+                "detail": 0
+            },
+            "scatter": {
+                "treeRound": 0,
+                "treeTall": 0,
+                "bushRound": 0.5,
+                "rockBoulder": 0.5,
+                "rockFlat": 0.6,
+                "grassTuft": 0.8,
+                "seedOffset": 2,
+                "clearing": 0
+            }
+        },
+        "southPass": {
+            "center": [0, 42],
+            "radius": 6,
+            "fade": 9,
+            "hills": {
+                "amplitude": 1.2,
+                "wavelength": 18,
+                "detail": 0
+            },
+            "scatter": {
+                "treeRound": 0,
+                "treeTall": 0,
+                "bushRound": 0.5,
+                "rockBoulder": 0.5,
+                "rockFlat": 0.6,
+                "grassTuft": 0.8,
+                "seedOffset": 2,
+                "clearing": 0
+            }
+        },
+        "westPass": {
+            "center": [-42, 0],
+            "radius": 6,
+            "fade": 9,
+            "hills": {
+                "amplitude": 1.2,
+                "wavelength": 18,
+                "detail": 0
+            },
+            "scatter": {
+                "treeRound": 0,
+                "treeTall": 0,
+                "bushRound": 0.5,
+                "rockBoulder": 0.5,
+                "rockFlat": 0.6,
+                "grassTuft": 0.8,
+                "seedOffset": 2,
+                "clearing": 0
             }
         }
     },
@@ -70,7 +150,7 @@
                 [0, -15],
                 [1, -26],
                 [-1, -34],
-                [0, -41]
+                [0, -42]
             ],
             "surface": "dirt"
         },
@@ -81,7 +161,7 @@
                 [0, 15],
                 [-1, 26],
                 [1, 34],
-                [0, 41]
+                [0, 42]
             ],
             "surface": "dirt"
         },
@@ -92,7 +172,7 @@
                 [15, 0],
                 [26, 1],
                 [34, -1],
-                [41, 0]
+                [42, 0]
             ],
             "surface": "dirt"
         },
@@ -103,7 +183,7 @@
                 [-15, 0],
                 [-26, -1],
                 [-34, 1],
-                [-41, 0]
+                [-42, 0]
             ],
             "surface": "dirt"
         }

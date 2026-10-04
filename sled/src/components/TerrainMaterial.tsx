@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { Color, type WebGLProgramParametersWithUniforms } from "three";
-import { palette } from "../palette";
+import type { SledMap } from "../maps";
 
 /** Metres from the camera where the haze starts and where it is thickest:
  *  with no fog, the far peaks would stand at full contrast. */
@@ -13,10 +14,13 @@ const snowTo = 0.78;
 
 const glsl = (hex: number) => `vec3(${new Color(hex).toArray().join(", ")})`;
 
-/** Snow on whatever faces up, stone on the steep faces, and the horizon's
- *  colour over the land with distance. The land is drawn in world space,
- *  so its own normal is the world's. */
-function injectSnowAndHaze(shader: WebGLProgramParametersWithUniforms) {
+/** The map's cover on whatever faces up, its rock on the steep faces, and
+ *  its haze over the land with distance. The land is drawn in world
+ *  space, so its own normal is the world's. */
+function injectCoverAndHaze(
+    shader: WebGLProgramParametersWithUniforms,
+    { terrain }: SledMap,
+) {
     shader.vertexShader = shader.vertexShader
         .replace(
             "#include <common>",
@@ -36,27 +40,40 @@ function injectSnowAndHaze(shader: WebGLProgramParametersWithUniforms) {
         .replace(
             "#include <color_fragment>",
             `#include <color_fragment>
-            diffuseColor.rgb = mix(diffuseColor.rgb, ${glsl(palette.snowAlbedo)},
+            diffuseColor.rgb = mix(diffuseColor.rgb, ${glsl(terrain.cover)},
                 smoothstep(${snowFrom}, ${snowTo}, vUp));`,
         )
         .replace(
             "#include <tonemapping_fragment>",
-            `gl_FragColor.rgb = mix(gl_FragColor.rgb, ${glsl(palette.skyHorizon)},
+            `gl_FragColor.rgb = mix(gl_FragColor.rgb, ${glsl(terrain.haze)},
                 ${hazeMost} * smoothstep(${hazeNear}.0, ${hazeFar}.0, vAway));
             #include <tonemapping_fragment>`,
         );
 }
-const programKey = () => "sled-terrain";
 
-/** The land's material, for the surface's `terrain` zone. */
-export function TerrainMaterial({ attach }: { attach?: string }) {
+interface TerrainMaterialProps {
+    attach?: string;
+    map: SledMap;
+}
+
+/** The land's material, for the surface's `terrain` zone, in the map's
+ *  colours. */
+export function TerrainMaterial({ attach, map }: TerrainMaterialProps) {
+    const shader = useMemo(
+        () => ({
+            inject: (shader: WebGLProgramParametersWithUniforms) =>
+                injectCoverAndHaze(shader, map),
+            key: () => `sled-terrain-${map.name}`,
+        }),
+        [map],
+    );
     return (
         <meshStandardMaterial
             attach={attach}
-            color={palette.stone}
+            color={map.terrain.rock}
             roughness={0.95}
-            onBeforeCompile={injectSnowAndHaze}
-            customProgramCacheKey={programKey}
+            onBeforeCompile={shader.inject}
+            customProgramCacheKey={shader.key}
         />
     );
 }

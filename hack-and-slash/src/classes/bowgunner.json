@@ -1,0 +1,80 @@
+{
+    "name": "Bowgunner",
+    "kind": "job",
+    "weapon": "crossbow",
+    "description": "Fights from range with the crossbow, and learns to hold one in each hand.",
+    "color": "#7ad97a",
+    "skills": [
+        {
+            "id": "steadyAim",
+            "name": "Steady Aim",
+            "description": "Bolts that strike harder.",
+            "sign": "aim",
+            "color": "#b6f0a0",
+            "row": 0,
+            "column": 0,
+            "ranks": 5,
+            "modifiers": [
+                {
+                    "stat": "damage",
+                    "perRank": 5
+                }
+            ]
+        },
+        {
+            "id": "quickReload",
+            "name": "Quick Reload",
+            "description": "Faster shots.",
+            "sign": "haste",
+            "color": "#ffd24a",
+            "row": 0,
+            "column": 1,
+            "ranks": 5,
+            "modifiers": [
+                {
+                    "stat": "attackSpeed",
+                    "perRank": 4
+                }
+            ]
+        },
+        {
+            "id": "boltVolley",
+            "name": "Bolt Volley",
+            "description": "A wide fan of bolts at once.",
+            "sign": "volley",
+            "color": "#7ad97a",
+            "row": 1,
+            "column": 0,
+            "ranks": 3,
+            "needsSkill": "steadyAim",
+            "needsRank": 1,
+            "active": {
+                "action": "volley",
+                "cooldown": 8,
+                "stamina": 20,
+                "damage": 0.8,
+                "damagePerRank": 0.15,
+                "count": 7,
+                "fan": 9
+            },
+            "cue": {
+                "move": "aim",
+                "element": "none",
+                "arcs": 0,
+                "shake": 0.06
+            }
+        },
+        {
+            "id": "twinCrossbows",
+            "name": "Twin Crossbows",
+            "description": "A crossbow in each hand.",
+            "sign": "twinBolts",
+            "color": "#9fd8ff",
+            "row": 1,
+            "column": 1,
+            "ranks": 1,
+            "needsPoints": 3,
+            "unlocks": ["dualWield"]
+        }
+    ]
+}

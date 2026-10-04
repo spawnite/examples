@@ -1,0 +1,8 @@
+{
+    "set": "flat",
+    "materials": {
+        "dirt": { "cover": {} },
+        "stone": { "cover": {} },
+        "rock": { "cover": {} }
+    }
+}

@@ -1,10 +1,18 @@
-import { useState } from "react";
-import { Game, Scene, WireFormat, type RoomOptions } from "@spawnite/engine";
+import { lazy, Suspense, useState } from "react";
+import {
+    Game,
+    Scene,
+    WireFormat,
+    type LoadingScreenOptions,
+    type RoomOptions,
+} from "@spawnite/engine";
+import { plugins } from "../game";
+import { HoldfastWarmHud } from "../hud/HoldfastWarmHud";
+import { save } from "../save";
 import { Holdfast } from "../scenes/Holdfast";
 import { preloadWardenBodies } from "../views/avatars";
 import { preloadCircleModels } from "../views/circle/models";
 import { preloadMonsterModels } from "../views/monsters/models";
-import { HoldfastLoadingScreen } from "./LoadingScreen";
 
 preloadWardenBodies();
 preloadMonsterModels();
@@ -38,6 +46,26 @@ function readRoomOptions(search: string): RoomOptions {
     };
 }
 
+/** The engine's loading screen, dressed for the night; its colours are in
+ *  styles.css. */
+const loadingScreen: LoadingScreenOptions = {
+    title: "Holdfast",
+    //  The circle at dusk, from inside it, shot with spawnite play screenshot.
+    art: `${import.meta.env.BASE_URL}loading.jpg`,
+    line: "Hold the circle till dawn",
+    tips: [
+        "Step into the lit ring by the fire, or press R, to get ready.",
+        "Two elements that meet on one monster set off a reaction.",
+        "Between waves, stand by the fire to heal.",
+        "Hold the fifteenth wave and dawn breaks over the circle.",
+    ],
+};
+
+//  Development only: a production build drops the import.
+const HoldfastDevtools = import.meta.env.DEV
+    ? lazy(() => import("./devtools"))
+    : undefined;
+
 export function App() {
     //  Game reads its room once, when it mounts.
     const [room] = useState(() => readRoomOptions(window.location.search));
@@ -47,9 +75,17 @@ export function App() {
             name="holdfast"
             start="holdfast"
             room={room}
-            loadingScreen={HoldfastLoadingScreen}
+            plugins={plugins}
+            save={save}
+            loadingScreen={loadingScreen}
         >
             <Scene name="holdfast" component={Holdfast} />
+            <HoldfastWarmHud />
+            {HoldfastDevtools && (
+                <Suspense fallback={null}>
+                    <HoldfastDevtools />
+                </Suspense>
+            )}
         </Game>
     );
 }

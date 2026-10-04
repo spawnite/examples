@@ -1,22 +1,16 @@
-import fris from "@game/assets/avatars/fris.vrm?url";
+import records from "@spawnite/assets/avatars.json";
+import fris from "@spawnite/assets/avatars/fris.vrm?url";
 import { registerAvatar, type VrmBody } from "@spawnite/engine";
 
 //  The body every heroine wears, under the name the room streams. The scene
 //  imports this module, as it imports the models, so the room registers the
-//  same name its pages do. The record is the mmorpg's own for the same file.
+//  same name its pages do.
 export const heroineAvatar = "fris";
 
-export const heroineBody = {
+export const heroineBody: VrmBody = {
+    //  JSON types a bone name as a plain string.
+    ...(records.fris as Omit<VrmBody, "model">),
     model: fris,
-    scale: 1,
-    armSpread: {
-        left: { out: 0.27, forward: 0.06 },
-        right: { out: 0.1, forward: 0 },
-    },
-    armColliders: {
-        radii: { upperArm: 0.06, lowerArm: 0.055, hand: 0.045 },
-        bonePrefix: "Skirt_",
-    },
-} satisfies VrmBody;
+};
 
 registerAvatar(heroineAvatar, heroineBody);

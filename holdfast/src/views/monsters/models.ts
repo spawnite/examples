@@ -1,8 +1,9 @@
-import brute from "@game/assets/models/holdfast/brute.glb?url";
-import husk from "@game/assets/models/holdfast/husk.glb?url";
-import skitter from "@game/assets/models/holdfast/skitter.glb?url";
-import { useGLTF } from "@react-three/drei";
+import brute from "@spawnite/assets/models/holdfast/brute.glb?url";
+import husk from "@spawnite/assets/models/holdfast/husk.glb?url";
+import skitter from "@spawnite/assets/models/holdfast/skitter.glb?url";
+import { useModel } from "@spawnite/engine";
 import { MonsterKind } from "../../siege/traits";
+import type { CutAway } from "./skin";
 
 //  Each kind's model, how big it stands, and which of its clips it walks,
 //  strikes, falls and flinches with. The files name their clips after the
@@ -31,7 +32,22 @@ export interface MonsterModel {
     eyeSprites?: EyeSprites;
     /** Metres across the soft shadow under it. */
     shadowMetres: number;
+    /** A part of its file it draws without. */
+    cut?: CutAway;
+    /** The colour of the molten seams its body burns with, if any. */
+    seams?: string;
 }
+
+/** The halo the brute's file floats over its horns, in its dark material:
+ *  above the crown of its head and behind its horns, which stand forward
+ *  of it. Read from the file's parts with gltf-transform. */
+const bruteHalo: CutAway = {
+    material: "Black",
+    axis: "z",
+    above: 0.02705,
+    across: "y",
+    beyond: -0.0032,
+};
 
 /** Where a model's eye glows sit, in its file's metres from its head bone,
  *  the model facing positive z. */
@@ -91,6 +107,7 @@ export const monsterModels: Record<MonsterKind, MonsterModel> = {
         walkMetresPerSecond: 1.8,
         eyeMaterial: "Eye_White",
         shadowMetres: 2.6,
+        cut: bruteHalo,
     },
     //  The husk's model, drawn at 1.5 m.
     [MonsterKind.Spitter]: {
@@ -112,8 +129,9 @@ export const monsterModels: Record<MonsterKind, MonsterModel> = {
         },
         shadowMetres: 1.4,
     },
-    //  The brute's model, drawn at 4.2 m. It strikes with its slam, whose
-    //  wind-up plays the strike clip.
+    //  The brute's model, drawn at 4.2 m, charred dark with molten seams and
+    //  no halo, and a longer stride than the brute's, so it lumbers. It
+    //  strikes with its slam, whose wind-up plays the strike clip.
     [MonsterKind.Colossus]: {
         url: brute,
         scale: 1.43,
@@ -123,13 +141,47 @@ export const monsterModels: Record<MonsterKind, MonsterModel> = {
             [MonsterClip.Fall]: "|Death",
             [MonsterClip.Flinch]: "|HitReact",
         },
-        walkMetresPerSecond: 3,
+        walkMetresPerSecond: 4.4,
         eyeMaterial: "Eye_White",
         shadowMetres: 4.4,
+        cut: bruteHalo,
+        seams: "#ff5a14",
     },
 };
 
+/** What decides a model's shaders: its file, which of its materials glow
+ *  as eyes, and its cut and seams. */
+export function readModelDressing({
+    url,
+    eyeMaterial,
+    eyeSprites,
+    cut,
+    seams,
+}: MonsterModel) {
+    return [
+        url,
+        eyeMaterial ?? "",
+        eyeSprites ? "sprites" : "",
+        cut ? "cut" : "",
+        seams ? "seams" : "",
+    ].join("|");
+}
+
+/** One kind for each way a model file is dressed: kinds dressed alike
+ *  share their shaders. */
+export function listModelKinds() {
+    const kinds = new Map<string, MonsterKind>();
+    for (const [kind, model] of Object.entries(monsterModels) as [
+        MonsterKind,
+        MonsterModel,
+    ][]) {
+        const dressing = readModelDressing(model);
+        if (!kinds.has(dressing)) kinds.set(dressing, kind);
+    }
+    return [...kinds.values()];
+}
+
 /** Starts fetching every kind's model while the page shows its menu. */
 export function preloadMonsterModels() {
-    for (const { url } of Object.values(monsterModels)) useGLTF.preload(url);
+    for (const { url } of Object.values(monsterModels)) useModel.preload(url);
 }

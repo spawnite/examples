@@ -1,19 +1,23 @@
 // @vitest-environment node
 import { afterEach, expect, it } from "vitest";
+import { PhaseMachine } from "../../src/siege/phase";
 import {
-    ChaseTargets,
+    ChaseTargetsTrait,
     createGameWorld,
     fixedStepSeconds,
     HealthTrait,
     isPayloadShaped,
-    Messages,
+    MessagesTrait,
     mountHeadlessScene,
-    SpawnPoints,
+    SpawnPointsTrait,
     spawnHero,
-    Transform,
+    TransformTrait,
+    weapons,
+    writeStateTags,
 } from "@spawnite/engine";
-import { pickWeapons, readyWeapon } from "../../src/siege/signals";
-import { SiegePhase, WardenTrait } from "../../src/siege/traits";
+import { siegePlugin } from "../../src/siege/siege.plugin";
+import { WardenTrait } from "../../src/siege/traits";
+import { countdownSeconds } from "../../src/siege/waves";
 import {
     deliverSignal,
     onField,
@@ -22,6 +26,7 @@ import {
     type OpenedSiege,
 } from "./room";
 import { Holdfast } from "../../src/scenes/Holdfast";
+import { LifeTrait } from "../../src/siege/life";
 
 let siege: OpenedSiege | undefined;
 
@@ -36,7 +41,7 @@ const side = 6.5 * Math.SQRT1_2;
 it("spawns the warden of each seat at her colour's place by the fire", async () => {
     siege = await openSiege();
 
-    const places = (siege.world.get(SpawnPoints) ?? []).map(({ x, z }) => [
+    const places = (siege.world.get(SpawnPointsTrait) ?? []).map(({ x, z }) => [
         x,
         z,
     ]);
@@ -66,7 +71,7 @@ it("leaves a warden where the room spawned her as the siege takes her in", async
     siege.step(fixedStepSeconds);
 
     expect(hero.get(WardenTrait)?.hue).toBe(0);
-    const feet = hero.get(Transform);
+    const feet = hero.get(TransformTrait);
     expect(feet?.x).toBeCloseTo(spawned.x, 3);
     expect(feet?.z).toBeCloseTo(spawned.z, 3);
 });
@@ -74,7 +79,7 @@ it("leaves a warden where the room spawned her as the siege takes her in", async
 it("gives a warden who joins in place of one who left her colour and her place", async () => {
     siege = await openSiege();
     const { world } = siege;
-    const points = world.get(SpawnPoints) ?? [];
+    const points = world.get(SpawnPointsTrait) ?? [];
     const join = (seat: number) =>
         spawnHero(world, {
             position: points[seat].clone(),
@@ -89,36 +94,47 @@ it("gives a warden who joins in place of one who left her colour and her place",
     siege.step(fixedStepSeconds);
 
     //  A run's start stands each warden at her colour's place.
-    deliverSignal(world, { hero: bo, name: readyWeapon });
-    deliverSignal(world, { hero: cy, name: readyWeapon });
-    siege.step(fixedStepSeconds);
+    deliverSignal(world, { hero: bo, message: siegePlugin.messages.ready });
+    deliverSignal(world, { hero: cy, message: siegePlugin.messages.ready });
+    siege.step(countdownSeconds + fixedStepSeconds * 2);
 
-    expect(readSiege(world).phase).toBe(SiegePhase.Breather);
+    expect(readSiege(world).phase).toBe(PhaseMachine.is.breather);
     expect(cy.get(WardenTrait)?.hue).toBe(0);
-    const feet = cy.get(Transform);
+    const feet = cy.get(TransformTrait);
     expect(feet?.x).toBeCloseTo(points[0].x, 3);
     expect(feet?.z).toBeCloseTo(points[0].z, 3);
 });
 
-it("takes each signal from a page with no payload, and refuses one that carries any", async () => {
+it("takes each signal from a page with the payload its message declares, and refuses one that carries another", async () => {
     siege = await openSiege();
-    const messages = siege.world.get(Messages);
-
-    for (const name of [readyWeapon, ...pickWeapons]) {
+    const messages = siege.world.get(MessagesTrait);
+    const { ready, unready, startWithout, pick } = siegePlugin.messages;
+    const readShape = (name: string) => {
         const shape = messages?.get(name)?.shape;
         if (!shape) throw new Error(`No ${name} message.`);
-        expect(isPayloadShaped({}, shape)).toBe(true);
-        expect(isPayloadShaped({ slot: 1 }, shape)).toBe(false);
+        return shape;
+    };
+
+    for (const { name } of [ready, unready, startWithout]) {
+        expect(isPayloadShaped({}, readShape(name))).toBe(true);
+        expect(isPayloadShaped({ slot: 1 }, readShape(name))).toBe(false);
     }
+    expect(isPayloadShaped({ slot: 2 }, readShape(pick.name))).toBe(true);
+    expect(isPayloadShaped({ slot: 3 }, readShape(pick.name))).toBe(false);
+    expect(isPayloadShaped({}, readShape(pick.name))).toBe(false);
 });
 
 it("lets a page's chase name a standing warden and not a downed one, with no siege running there", async () => {
-    //  A page mounts the scene on a world that runs no siege systems.
-    const world = createGameWorld();
+    //  A world with the scene's weapons and no siege systems.
+    const world = createGameWorld([weapons()]);
     const page = await mountHeadlessScene(Holdfast, world);
-    const up = world.spawn(WardenTrait({ down: false }));
-    const down = world.spawn(WardenTrait({ down: true }));
-    const accepts = world.get(ChaseTargets)?.accepts;
+    const up = world.spawn(WardenTrait, LifeTrait);
+    const down = world.spawn(
+        WardenTrait,
+        LifeTrait({ state: { down: "lying" } }),
+    );
+    for (const hero of [up, down]) writeStateTags(hero, LifeTrait);
+    const accepts = world.get(ChaseTargetsTrait)?.accepts;
 
     expect([up, down].map((hero) => accepts?.(hero))).toEqual([true, false]);
     await page.unmount();

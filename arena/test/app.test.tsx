@@ -1,49 +1,16 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
-import { loadRapier, useVoice } from "@spawnite/engine";
+import { loadRapier, useVoice, WireFormat } from "@spawnite/engine";
 import App from "../src/app/app";
 
-//  jsdom has no WebGL: the canvas is a div that renders its children, as
-//  the engine's own sample test mounts them, and the engine leaves out the
-//  views that draw the world, turned off below: see
-//  https://create.spawnite.com/engine/testing/devtools/#a-whole-game-in-jsdom
-vi.mock("@react-three/fiber", () => {
-    //  What a selector reads: the camera's canvas in the page, no pointer
-    //  events on it, and the frameloop behind `get`. The devtools overlay,
-    //  which can mount before a case ends, has the loop time its frames,
-    //  which wraps the renderer's render and brackets it with fiber's
-    //  global effects.
-    const three = {
-        get: () => ({
-            frameloop: "always",
-            setFrameloop: () => undefined,
-            invalidate: () => undefined,
-            gl: {
-                render: () => undefined,
-                getContext: () => ({ getExtension: () => null }),
-            },
-        }),
-        gl: { domElement: document.createElement("canvas") },
-        events: { connected: undefined },
-    };
-    return {
-        Canvas: ({ children, ...props }: PropsWithChildren) => (
-            <div data-testid="canvas" {...props}>
-                {children}
-            </div>
-        ),
-        useFrame: () => undefined,
-        extend: () => undefined,
-        useThree: (select: (state: typeof three) => unknown) => select(three),
-        addEffect: () => () => undefined,
-        addAfterEffect: () => () => undefined,
-    };
-});
-vi.mock("@react-three/drei", async (importOriginal) => ({
-    ...(await importOriginal<typeof import("@react-three/drei")>()),
-    CameraControls: () => null,
-}));
+//  jsdom has no WebGL, and the views are off below: see
+//  https://wiki.spawnite.com/engine/testing/devtools/#a-whole-game-in-jsdom
+vi.mock("@react-three/fiber", async () =>
+    (await import("@spawnite/testing/fiber")).fakeFiber(),
+);
+vi.mock("@react-three/drei", async (importOriginal) =>
+    (await import("@spawnite/testing/fiber")).fakeDrei(importOriginal),
+);
 
 /** The sockets the app opened, which never connect: the room is not
  *  running, and the app is only asked where it would go and as whom. */
@@ -96,7 +63,7 @@ it("opens the arena with the scoreboard, the instructions and the room connectin
             "WASD walks and the mouse looks. A click shoots, a right click slings a stone. Grab the coins.",
         ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Connecting to the room.")).toBeInTheDocument();
+    expect(screen.getByText("Joining the game…")).toBeInTheDocument();
     expect(sockets.map((socket) => socket.url)).toEqual([
         "ws://localhost:8787",
     ]);
@@ -116,9 +83,13 @@ it("joins the room the address names, under the name it names", async () => {
     });
 
     expect(socket.url).toBe("ws://room.test:9000");
-    expect(socket.sent.map((text) => JSON.parse(text))).toEqual([
-        { type: "join", name: "Ada", wire: "binary-2" },
-    ]);
+    //  The engine adds what its own client predicts to the join.
+    expect(socket.sent).toHaveLength(1);
+    expect(JSON.parse(socket.sent[0])).toMatchObject({
+        type: "join",
+        name: "Ada",
+        wire: WireFormat.Binary,
+    });
 });
 
 it("asks the room for JSON text when the address says wire=json", async () => {
@@ -130,27 +101,10 @@ it("asks the room for JSON text when the address says wire=json", async () => {
         socket.dispatchEvent(new Event("open"));
     });
 
-    expect(socket.sent.map((text) => JSON.parse(text))).toEqual([
-        { type: "join", name: "Ada", wire: "json" },
-    ]);
-});
-
-it("offers her microphone on once the room opens voice, and turns it off", async () => {
-    await renderApp();
-    expect(
-        screen.queryByRole("button", { name: "Microphone" }),
-    ).not.toBeInTheDocument();
-
-    act(() => useVoice.setState({ microphone: true }));
-    const button = await screen.findByRole("button", { name: "Microphone" });
-    expect(button).toHaveAttribute("aria-pressed", "true");
-
-    fireEvent.click(button);
-
-    expect(useVoice.getState().muted).toBe(true);
-    expect(button).toHaveAttribute("aria-pressed", "false");
-
-    fireEvent.click(button);
-
-    expect(useVoice.getState().muted).toBe(false);
+    expect(socket.sent).toHaveLength(1);
+    expect(JSON.parse(socket.sent[0])).toMatchObject({
+        type: "join",
+        name: "Ada",
+        wire: "json",
+    });
 });

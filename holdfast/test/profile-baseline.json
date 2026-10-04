@@ -1,0 +1,22 @@
+{
+    "screenDraws": 1,
+    "renderTargetDraws": 260,
+    "screenTriangles": 1,
+    "renderTargetTriangles": 2017768,
+    "screenInstances": 0,
+    "renderTargetInstances": 144024,
+    "screenMultiDraws": 0,
+    "renderTargetMultiDraws": 0,
+    "screenSubDraws": 0,
+    "renderTargetSubDraws": 0,
+    "programs": 81,
+    "programLinks": 0,
+    "textureUploads": 3,
+    "bufferUploads": 26,
+    "garbageBytesPerFrame": 220454,
+    "stillTextureUploads": 3,
+    "stillBufferUploads": 7,
+    "paintsPerSecond": 6.8,
+    "rasterTasksPerSecond": 17.6,
+    "fps": 60
+}

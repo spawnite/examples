@@ -22,6 +22,7 @@ import {
     PoseState,
     prepareVrm,
     sizeArmColliders,
+    type VrmBody,
 } from "@spawnite/engine";
 import { AvatarId, avatars } from "../src/avatars";
 
@@ -47,14 +48,19 @@ it("ships a model named for every avatar", () => {
     }
 });
 
+it("keeps spring colliders only on humanoid bones", () => {
+    const humanoid: string[] = Object.values(VRMHumanBoneName);
+    for (const body of Object.values(avatars) as VrmBody[])
+        for (const bone of body.springColliderBones ?? [])
+            expect(humanoid, bone).toContain(bone);
+});
+
 async function loadAsset(path: string): Promise<Record<string, unknown>> {
     // The loader decodes textures through browser globals; no test reads them.
     vi.stubGlobal("self", globalThis);
     vi.stubGlobal("createImageBitmap", vi.fn().mockResolvedValue({}));
     const loader = new GLTFLoader();
-    //  Drei types its loader by its own GLTFLoader port; the register call
-    //  is the same.
-    extendVrmLoader(loader as unknown as Parameters<typeof extendVrmLoader>[0]);
+    extendVrmLoader(loader);
     const file = new Uint8Array(readFileSync(resolveAssetPath(path)));
     const { userData } = await loader.parseAsync(file.buffer, "");
     return userData;
@@ -65,13 +71,22 @@ const FEET = new Vector3(3, 2, -4);
 // whichever way she faces.
 const SLOPE = 0.15;
 
+const fakeGround = (
+    name: string,
+    getHeightAt: (position: Pick<Vector3, "x" | "z">) => number,
+) => ({
+    name,
+    getHeightAt,
+    getPointAt: (position: Pick<Vector3, "x" | "z">, target: Vector3) =>
+        target.set(position.x, getHeightAt(position), position.z),
+});
+
 it.each([
-    { name: "level", getHeightAt: () => FEET.y },
-    {
-        name: "sloped",
-        getHeightAt: ({ x, z }: Pick<Vector3, "x" | "z">) =>
-            FEET.y + SLOPE * Math.hypot(x - FEET.x, z - FEET.z),
-    },
+    fakeGround("level", () => FEET.y),
+    fakeGround(
+        "sloped",
+        ({ x, z }) => FEET.y + SLOPE * Math.hypot(x - FEET.x, z - FEET.z),
+    ),
 ])("rests the hero's tail on $name ground", async (ground) => {
     //  Fris by name, not whichever body the heroine wears: her tail and its
     //  clearance are the subject here, and another body has neither.
@@ -164,7 +179,7 @@ it("gives the skirt's chains a collider over each arm, and nothing else one", as
     const wider = { upperArm: 0.09, lowerArm: 0.08, hand: 0.07 };
 
     let skirtJoints = 0;
-    for (const radii of [fris.armColliders.radii, wider]) {
+    for (const radii of [fris.armColliders!.radii, wider]) {
         sizeArmColliders(vrm, radii);
         for (const joint of vrm.springBoneManager?.joints ?? []) {
             const skirt = joint.bone.name.startsWith("Skirt_");
@@ -242,6 +257,6 @@ it.each(Object.entries(avatars))(
             .map((joint) => joint.bone.name);
         expect(covered.length, avatarId).toBeGreaterThan(0);
         for (const bone of covered)
-            expect(bone.startsWith(avatar.armColliders.bonePrefix)).toBe(true);
+            expect(bone.startsWith(avatar.armColliders!.bonePrefix)).toBe(true);
     },
 );

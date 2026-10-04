@@ -2,13 +2,13 @@ import type { Entity } from "koota";
 import { useQuery, useTrait } from "koota/react";
 import {
     Hud,
-    NetworkId,
+    NetworkIdTrait,
     Panel,
-    PlayerName,
+    PlayerNameTrait,
     Slot,
     Text,
     useRoom,
-    Wallet,
+    WalletTrait,
 } from "@spawnite/engine";
 
 interface ScoreRowProps {
@@ -17,10 +17,10 @@ interface ScoreRowProps {
 
 /** One heroine's name and coins, the page's own marked. */
 function ScoreRow({ entity }: ScoreRowProps) {
-    const player = useTrait(entity, PlayerName);
-    const wallet = useTrait(entity, Wallet);
+    const player = useTrait(entity, PlayerNameTrait);
+    const wallet = useTrait(entity, WalletTrait);
     const heroId = useRoom((state) => state.heroId);
-    const own = heroId !== null && entity.get(NetworkId)?.id === heroId;
+    const own = heroId !== null && entity.get(NetworkIdTrait)?.id === heroId;
     const name = player?.name ?? "";
 
     return (
@@ -33,7 +33,7 @@ function ScoreRow({ entity }: ScoreRowProps) {
 /** Every heroine in the room and the coins she holds, as the room counts
  *  them. */
 export function Scoreboard() {
-    const heroes = useQuery(PlayerName, Wallet);
+    const heroes = useQuery(PlayerNameTrait, WalletTrait);
 
     return (
         <Hud>

@@ -4,16 +4,16 @@ import { WorldProvider } from "koota/react";
 import { Vector3 } from "three";
 import { beforeAll, expect, it } from "vitest";
 import {
-    Collider,
+    ColliderTrait,
     createGameWorld,
     createGroundSurface,
     fixedStepSeconds,
-    Ground,
-    Hero,
+    GroundTrait,
+    HeroTrait,
     loadRapier,
     moveActorsThroughPhysics,
-    Transform,
-    Velocity,
+    TransformTrait,
+    VelocityTrait,
 } from "@spawnite/engine";
 import { UnstuckButton } from "../../src/hud/UnstuckButton";
 
@@ -22,12 +22,12 @@ beforeAll(loadRapier);
 it("shows the button only while she is stuck, and takes it away once she is freed", () => {
     const world = createGameWorld();
     const surface = createGroundSurface();
-    world.spawn(Ground({ surface }));
+    world.spawn(GroundTrait({ surface }));
     const floor = surface.getHeightAt({ x: 0, z: 0 });
     const hero = world.spawn(
-        Hero,
-        Transform(new Vector3(0.2, floor, 0.1)),
-        Velocity,
+        HeroTrait,
+        TransformTrait(new Vector3(0.2, floor, 0.1)),
+        VelocityTrait,
     );
     const step = () =>
         act(() => moveActorsThroughPhysics(world, fixedStepSeconds));
@@ -40,21 +40,21 @@ it("shows the button only while she is stuck, and takes it away once she is free
     try {
         step();
         const onSpawn = button();
-        hero.set(Velocity, new Vector3(3, 0, 0));
+        hero.set(VelocityTrait, new Vector3(3, 0, 0));
         for (let at = 0; at < 10; at++) step();
         const whileWalking = button();
-        hero.set(Velocity, new Vector3());
+        hero.set(VelocityTrait, new Vector3());
         //  A 3 m rock set down round her.
-        const { x, z } = hero.get(Transform) ?? { x: 0, z: 0 };
+        const { x, z } = hero.get(TransformTrait) ?? { x: 0, z: 0 };
         world.spawn(
-            Transform(new Vector3(x, floor + 1, z)),
-            Collider({ size: new Vector3(3, 3, 3) }),
+            TransformTrait(new Vector3(x, floor + 1, z)),
+            ColliderTrait({ size: new Vector3(3, 3, 3) }),
         );
         step();
         const stuck = button();
         if (stuck) fireEvent.click(stuck);
         step();
-        const freed = hero.get(Transform);
+        const freed = hero.get(TransformTrait);
 
         expect(onSpawn).toBeNull();
         expect(whileWalking).toBeNull();

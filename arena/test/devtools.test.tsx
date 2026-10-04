@@ -2,8 +2,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import {
     createGameWorld,
-    NetworkId,
-    PlayerName,
+    NetworkIdTrait,
+    PlayerNameTrait,
     RoomStatus,
     useRoom,
     WireFormat,
@@ -19,7 +19,7 @@ afterEach(() => {
 it("reads the room's status as a word, a player by name and a labelled rate", () => {
     useRoom.setState({ status: RoomStatus.Joined, snapshotsPerSecond: 24 });
     const world = createGameWorld();
-    world.spawn(NetworkId({ id: "1" }), PlayerName({ name: "Ada" }));
+    world.spawn(NetworkIdTrait({ id: "1" }), PlayerNameTrait({ name: "Ada" }));
     const { unmount } = render(
         <WorldProvider world={world}>
             <RoomPanel />

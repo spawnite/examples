@@ -1,40 +1,66 @@
+import { useEffect, useState } from "react";
 import {
     Camera,
     CameraPreset,
-    LookName,
+    createGroundSurface,
     type LookPick,
     Player,
+    readMap,
     registerMaps,
+    useHeadless,
     World,
 } from "@spawnite/engine";
+import { dusk } from "@spawnite/engine/looks/dusk";
 import { Ambience } from "../audio/Ambience";
 import { Cues } from "../audio/Cues";
+import { Footsteps } from "../audio/Footsteps";
 import { Announcer } from "../hud/Announcer";
 import { BossBar } from "../hud/BossBar";
 import { CardPick } from "../hud/CardPick";
+import { Controls } from "../hud/Controls";
+import { CardFlights } from "../hud/CardFlights";
+import { EpicPulls } from "../hud/EpicPulls";
+import { Dawn } from "../hud/Dawn";
 import { Downed } from "../hud/Downed";
+import { LineCalls } from "../hud/ElementLines";
+import { Gathering } from "../hud/Gathering";
 import { RunOver } from "../hud/RunOver";
 import { Scoreboard } from "../hud/Scoreboard";
+import { UsePrompt } from "../hud/UsePrompt";
 import { SiegeRules } from "../siege/SiegeRules";
 import { Vitals } from "../hud/Vitals";
 import { WaveBanner } from "../hud/WaveBanner";
 import { HitMarker } from "../hud/HitMarker";
+import { DamageArc } from "../hud/DamageArc";
+import { RiftCues } from "../hud/RiftCues";
+import { ReactionWords } from "../hud/ReactionWords";
+import { LowHealth } from "../hud/LowHealth";
 import { Actors } from "../views/Actors";
 import { Banners } from "../views/ambient/Banners";
 import { Crow } from "../views/ambient/Crow";
 import { Fireflies } from "../views/ambient/Fireflies";
 import { DamageNumbers } from "../views/DamageNumbers";
 import { Corpses } from "../views/monsters/Corpses";
+import { MonsterMarks } from "../views/monsters/MonsterMarks";
 import { Circle } from "../views/Circle";
+import { Rack } from "../views/Rack";
 import { LatePoses } from "../views/warden/latePoses";
+import { MuzzleLight } from "../views/warden/MuzzleLight";
+import { ReadyRing } from "../views/ReadyRing";
 import { GroundCover } from "../views/GroundCover";
+import { createHoldfastGrass } from "../views/ground/grassShader";
 import { HurtVignette } from "../views/HurtVignette";
 import { TracerView } from "../views/TracerView";
+import { WarmUp } from "../views/WarmUp";
+import { PhaseMarks } from "../views/PhaseMarks";
+import { blasterWeapon } from "../siege/blaster";
 import { Arsenal } from "../weapons/Arsenal";
-import { TakePlace } from "../weapons/TakePlace";
 import { Trigger } from "../weapons/Trigger";
 
-export { systems } from "../siege/systems";
+export { plugins, room } from "../game";
+export { save } from "../save";
+export { bot } from "../siege/bot";
+export { timeline } from "../siege/timeline";
 
 //  Every map file under src/maps, each by its file name: here rather than
 //  in the app, so the room, which loads this file alone, has the map too.
@@ -48,7 +74,7 @@ const stillDaySeconds = 1e9;
  *  turns a colour pushed past white by the bloom, such as a warden's ring,
  *  black. The glow reaches the fire and the runes and not the ground. */
 const holdfastLook: LookPick = {
-    name: LookName.Dusk,
+    base: dusk,
     exposure: 1.18,
     bloom: { intensity: 0.8, threshold: 0.8 },
     grading: { saturation: 0, contrast: 0.12 },
@@ -56,43 +82,75 @@ const holdfastLook: LookPick = {
 };
 
 /** The one scene, which the room mounts headless and every page mounts to
- *  draw it. The room runs the siege on the systems this file exports; a
+ *  draw it. The room runs the siege on the plugins this file exports; a
  *  page draws what it streams. */
 export function Holdfast() {
+    const headless = useHeadless();
+    //  The page's grass, shaped by the same layout as the ground's paint.
+    const [shaped] = useState(() =>
+        headless
+            ? undefined
+            : createHoldfastGrass(createGroundSurface(readMap("holdfast"))),
+    );
+    useEffect(() => () => shaped?.roadWeights.dispose(), [shaped]);
+
     return (
         <World
             map="holdfast"
             look={holdfastLook}
             dayLengthSeconds={stillDaySeconds}
+            grass={shaped?.grass}
+            //  The night's own sky and air, which Surroundings draws.
+            sky={false}
+            fog={false}
         >
             <GroundCover />
             <Circle />
+            <Rack />
+            <ReadyRing />
             <Fireflies />
             <Banners />
             <Crow />
-            <Player />
+            {/*  No respawn, though her health lives on WardenTrait and the
+                engine never downs her: only siege/downs.ts gets her up. */}
+            <Player weapons={[blasterWeapon]} respawn={false} />
             <Camera preset={CameraPreset.Shooter} firstPerson={false} />
             <LatePoses />
+            <MuzzleLight />
             <Arsenal />
             <SiegeRules />
             <Trigger />
             <TracerView />
-            <TakePlace />
             <Actors />
+            <WarmUp />
+            <PhaseMarks />
             <Corpses />
+            <MonsterMarks />
             <DamageNumbers />
+            <ReactionWords />
             <HitMarker />
             <HurtVignette />
+            <LowHealth />
+            <DamageArc />
+            <RiftCues />
             <WaveBanner />
+            <Gathering />
+            <Controls />
             <BossBar />
             <Announcer />
+            <LineCalls />
             <Cues />
+            <Footsteps />
             <Ambience />
             <Scoreboard />
             <Vitals />
             <Downed />
+            <UsePrompt />
             <CardPick />
+            <CardFlights />
+            <EpicPulls />
             <RunOver />
+            <Dawn />
         </World>
     );
 }

@@ -1,30 +1,33 @@
 // @vitest-environment node
 import { Vector2, Vector3 } from "three";
-import { expect, it } from "vitest";
-import { mountHeadlessScene, readModelSize } from "@spawnite/engine";
+import { expect } from "vitest";
+import { readModelSize } from "@spawnite/engine";
 import {
-    Body,
+    BodyTrait,
     ChaseTrait,
     defaultWalkerBody,
     fixedStepSeconds,
     HealthTrait,
     launchProjectile,
+    requireAuthority,
     placePlayer,
     sendInput,
     stepSeconds,
     teleportActor,
-    Transform,
-    Wallet,
-    Weapons,
+    TransformTrait,
+    WalletTrait,
+    WeaponsTrait,
     type HeadlessGame,
 } from "@spawnite/engine/core";
+import { it } from "@spawnite/engine/testing";
 import models from "../src/models.json";
+import { plugins } from "../src/game";
 import { Arena, coinPositions } from "../src/scenes/Arena";
 
 /** The monster on the positive z axis, 16 m out. */
 function findMonsterAhead({ world }: HeadlessGame) {
-    const monster = world.query(ChaseTrait, Transform).find((entity) => {
-        const position = entity.get(Transform);
+    const monster = world.query(ChaseTrait, TransformTrait).find((entity) => {
+        const position = entity.get(TransformTrait);
         return !!position && Math.abs(position.x) < 0.01 && position.z > 0;
     });
     if (!monster) throw new Error("no monster on the z axis");
@@ -41,8 +44,8 @@ function measureMonsterModelHeight() {
 /** Metres from `position` to the nearest monster. */
 function measureNearestMonster({ world }: HeadlessGame, position: Vector3) {
     let nearest = Infinity;
-    for (const monster of world.query(ChaseTrait, Transform)) {
-        const distance = monster.get(Transform)?.distanceTo(position);
+    for (const monster of world.query(ChaseTrait, TransformTrait)) {
+        const distance = monster.get(TransformTrait)?.distanceTo(position);
         if (distance !== undefined) nearest = Math.min(nearest, distance);
     }
     return nearest;
@@ -55,50 +58,56 @@ it("sizes the monster as the boulder from the scene the room loads", () => {
     expect(readModelSize("monster")).toEqual(models["rock-boulder"].capsule);
 });
 
-it("closes the nearest monster on a heroine who stands still", async () => {
-    const game = await mountHeadlessScene(Arena);
+it("closes the nearest monster on a heroine who stands still", async ({
+    scene,
+    createWorld,
+}) => {
+    const game = await scene(Arena, createWorld(plugins).world);
     const player = placePlayer(game, new Vector3(0, 0, 0));
-    const standing = player.get(Transform)?.clone();
+    const standing = player.get(TransformTrait)?.clone();
     if (!standing) throw new Error("no heroine");
     const before = measureNearestMonster(game, standing);
 
     stepSeconds(game, 4);
 
     expect(before - measureNearestMonster(game, standing)).toBeGreaterThan(5);
-    await game.unmount();
-    game.world.destroy();
 });
 
-it("takes a quarter of the monster ahead's health with a stone from her sling", async () => {
-    const game = await mountHeadlessScene(Arena);
+it("takes a quarter of the monster ahead's health with a stone from her sling", async ({
+    scene,
+    createWorld,
+}) => {
+    const game = await scene(Arena, createWorld(plugins).world);
     const monster = findMonsterAhead(game);
     const hero = placePlayer(game, new Vector3(0, 0, 8));
     stepSeconds(game, 0.1);
-    const sling = game.world.get(Weapons)?.get("sling");
-    const feet = hero.get(Transform)?.clone();
-    const target = monster.get(Transform)?.clone();
+    const sling = game.world.get(WeaponsTrait)?.get("sling");
+    const feet = hero.get(TransformTrait)?.clone();
+    const target = monster.get(TransformTrait)?.clone();
     if (!sling || !feet || !target)
         throw new Error("no sling, heroine or monster");
     const origin = feet.setY(feet.y + defaultWalkerBody.height / 2);
 
-    launchProjectile(game.world, {
+    launchProjectile(requireAuthority(game.world), {
         origin,
         direction: target
             .setY(target.y + 0.35)
             .sub(origin)
             .normalize(),
         weapon: sling,
+        weaponName: "sling",
         shooter: hero,
     });
     stepSeconds(game, 1);
 
     expect(monster.get(HealthTrait)?.current).toBe(75);
-    await game.unmount();
-    game.world.destroy();
 });
 
-it("credits the coin she walks over to her wallet", async () => {
-    const game = await mountHeadlessScene(Arena);
+it("credits the coin she walks over to her wallet", async ({
+    scene,
+    createWorld,
+}) => {
+    const game = await scene(Arena, createWorld(plugins).world);
     //  The coin straight ahead of her on the z axis: her line toward the
     //  middle passes no other coin within reach.
     const coin = coinPositions.find(({ x, z }) => Math.abs(x) < 0.01 && z > 0);
@@ -110,13 +119,11 @@ it("credits the coin she walks over to her wallet", async () => {
     //  Two metres at five a second, with the ramp up to speed.
     stepSeconds(game, 1);
 
-    expect(player.get(Wallet)?.coins).toBe(1);
-    await game.unmount();
-    game.world.destroy();
+    expect(player.get(WalletTrait)?.coins).toBe(1);
 });
 
-it("stops her at a monster she runs into", async () => {
-    const game = await mountHeadlessScene(Arena);
+it("stops her at a monster she runs into", async ({ scene, createWorld }) => {
+    const game = await scene(Arena, createWorld(plugins).world);
     //  Three metres ahead of her along -z: it closes to its reach and stands
     //  there.
     const monster = findMonsterAhead(game);
@@ -128,27 +135,30 @@ it("stops her at a monster she runs into", async () => {
 
     //  Her radius and its radius short of its axis, nearer than its reach:
     //  she walked up to it, and her capsule stands against its capsule.
-    const contact = defaultWalkerBody.radius + (monster.get(Body)?.radius ?? 0);
+    const contact =
+        defaultWalkerBody.radius + (monster.get(BodyTrait)?.radius ?? 0);
     const gap =
-        (player.get(Transform)?.z ?? 0) - (monster.get(Transform)?.z ?? 0);
+        (player.get(TransformTrait)?.z ?? 0) -
+        (monster.get(TransformTrait)?.z ?? 0);
     expect(gap).toBeGreaterThan(contact - 0.01);
     expect(gap).toBeLessThan(contact + 0.1);
-    await game.unmount();
-    game.world.destroy();
 });
 
-it("holds her on a monster at the top of the rock it is drawn as", async () => {
-    const game = await mountHeadlessScene(Arena);
+it("holds her on a monster at the top of the rock it is drawn as", async ({
+    scene,
+    createWorld,
+}) => {
+    const game = await scene(Arena, createWorld(plugins).world);
     const player = placePlayer(game, new Vector3(0, 0, 0));
     //  Her capsule is made on her first step.
     stepSeconds(game, fixedStepSeconds);
     const monster = findMonsterAhead(game);
-    const ground = monster.get(Transform)?.y ?? 0;
+    const ground = monster.get(TransformTrait)?.y ?? 0;
     //  Over its axis and jumping, so she comes down on its top.
     player.set(
-        Transform,
+        TransformTrait,
         monster
-            .get(Transform)
+            .get(TransformTrait)
             ?.clone()
             .setY(ground + 2.5) ?? new Vector3(),
     );
@@ -158,12 +168,12 @@ it("holds her on a monster at the top of the rock it is drawn as", async () => {
     sendInput(game, { jump: false });
 
     //  Her feet over the ground when her fall first stops.
-    let previous = (player.get(Transform)?.y ?? 0) - ground;
+    let previous = (player.get(TransformTrait)?.y ?? 0) - ground;
     let falling = false;
     let stand: number | undefined;
     for (let step = 0; step < 180 && stand === undefined; step++) {
         stepSeconds(game, fixedStepSeconds);
-        const feet = (player.get(Transform)?.y ?? 0) - ground;
+        const feet = (player.get(TransformTrait)?.y ?? 0) - ground;
         if (previous - feet > 0.05) falling = true;
         else if (falling && previous - feet < 0.01) stand = previous;
         previous = feet;
@@ -175,6 +185,4 @@ it("holds her on a monster at the top of the rock it is drawn as", async () => {
     const rockTop = measureMonsterModelHeight();
     expect(stand).toBeGreaterThan(rockTop - 0.05);
     expect(stand).toBeLessThan(rockTop + 0.15);
-    await game.unmount();
-    game.world.destroy();
 });

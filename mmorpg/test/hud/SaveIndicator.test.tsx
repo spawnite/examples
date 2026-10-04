@@ -1,20 +1,29 @@
 // @vitest-environment jsdom
 import { act, render, screen, within } from "@testing-library/react";
-import { Vector3 } from "three";
-import { expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { create } from "zustand";
+import { SaveStatus } from "@spawnite/engine";
 import { SaveIndicator } from "../../src/hud/SaveIndicator";
-import { createGameStores, GameStoresContext } from "@spawnite/engine";
-import { heroBuilder } from "../helpers/heroBuilder";
 
-//  One for the file: the second case reads the count the first one raised.
-const stores = createGameStores("three-mmorpg");
+//  The save's status, as the engine's scheduler moves it, in place of a
+//  Game's save.
+const useStatus = create<{ status: SaveStatus }>()(() => ({
+    status: SaveStatus.Saved,
+}));
+vi.mock("@spawnite/engine", async (importOriginal) => ({
+    ...(await importOriginal<typeof import("@spawnite/engine")>()),
+    useSaveStatus: () => ({
+        status: useStatus((state) => state.status),
+        destination: "platform",
+        problem: null,
+        size: null,
+    }),
+}));
+
+afterEach(() => useStatus.setState({ status: SaveStatus.Saved }));
 
 function renderIndicator() {
-    return render(
-        <GameStoresContext value={stores}>
-            <SaveIndicator />
-        </GameStoresContext>,
-    );
+    return render(<SaveIndicator />);
 }
 
 //  The fill and the fade are asserted in the story's play function, which runs
@@ -22,17 +31,11 @@ function renderIndicator() {
 //  watched before it fills, or a screen reader announces nothing. Whether
 //  VoiceOver speaks the word is read by hand; this pins the DOM it reads.
 
-//  Every save writes a different position, because a payload identical to the
-//  last one is a save the store skips, and a skipped save raises no count.
-function save(distance: number) {
-    act(() => {
-        stores.save.getState().writeSave({
-            hero: heroBuilder()
-                .at(new Vector3(distance, 0.5, 2))
-                .withHealth(80)
-                .toSave(),
-        });
-    });
+/** A change, then its write landing, as the scheduler reports them. */
+function save() {
+    act(() => useStatus.setState({ status: SaveStatus.Unsaved }));
+    act(() => useStatus.setState({ status: SaveStatus.Saving }));
+    act(() => useStatus.setState({ status: SaveStatus.Saved }));
 }
 
 it("appears when a save lands", () => {
@@ -43,12 +46,11 @@ it("appears when a save lands", () => {
         const status = screen.getByRole("status");
         expect(status).toBeEmptyDOMElement();
 
-        save(7);
+        save();
 
         expect(status).toHaveTextContent("Saved");
     } finally {
         unmount();
-        localStorage.clear();
     }
 });
 
@@ -56,12 +58,12 @@ it("names every save, and fills the ring again for each one", () => {
     const { unmount } = renderIndicator();
     try {
         const status = screen.getByRole("status");
-        //  A save has already landed by now, in the case above. Whatever the
-        //  count is when the region mounts has already happened, and a region
-        //  that arrives full is one nothing was watching.
+        //  A save that landed before the region mounted has already
+        //  happened, and a region that arrives full is one nothing was
+        //  watching.
         expect(status).toBeEmptyDOMElement();
 
-        save(11);
+        save();
 
         const announcement = within(status).getByText("Saved");
         const glyph = status.querySelector("[aria-hidden]");
@@ -71,12 +73,24 @@ it("names every save, and fills the ring again for each one", () => {
         //  the glyph mount again, which is what restarts the fill and what
         //  gives the region something to read. Text that never changed is a
         //  save a screen reader passes over.
-        save(13);
+        save();
 
         expect(within(status).getByText("Saved")).not.toBe(announcement);
         expect(status.querySelector("[aria-hidden]")).not.toBe(glyph);
     } finally {
         unmount();
-        localStorage.clear();
+    }
+});
+
+it("shows nothing for a status that is no landed save: loading, a change waiting, a refusal", () => {
+    const { unmount } = renderIndicator();
+    try {
+        const status = screen.getByRole("status");
+        act(() => useStatus.setState({ status: SaveStatus.Unsaved }));
+        act(() => useStatus.setState({ status: SaveStatus.Saving }));
+        act(() => useStatus.setState({ status: SaveStatus.Refused }));
+        expect(status).toBeEmptyDOMElement();
+    } finally {
+        unmount();
     }
 });

@@ -11,26 +11,27 @@ import {
     Object3D,
     Vector3,
 } from "three";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { Ref } from "@spawnite/engine";
+import { expect, it, vi } from "vitest";
+import { RefTrait } from "@spawnite/engine";
 import { SlingPosts } from "../../src/components/SlingPosts";
-import { buildRun, levels } from "../../src/levels";
+import { buildRun, levels, Track } from "../../src/levels";
 import { spawnDistance } from "../../src/ride/rider";
+import { RunMachine, RunTrait } from "../../src/ride/course";
 import { pullMaximum, SlingTrait } from "../../src/ride/sling";
 
 //  A post a metre tall about its middle, as the model is.
 const post = new Mesh(new BoxGeometry(0.2, 1, 0.3), new MeshStandardMaterial());
 const model = new Group().add(post);
 
-vi.mock("@react-three/drei", async (importOriginal) => ({
-    ...(await importOriginal<typeof import("@react-three/drei")>()),
-    useGLTF: Object.assign(() => ({ scene: model }), { preload: vi.fn() }),
-}));
+//  The engine's model loader reads its files through fiber's.
+vi.mock("@react-three/fiber", async (importOriginal) =>
+    (await import("@spawnite/testing/fiber")).fakeLoader(
+        importOriginal,
+        () => ({ scene: model }),
+    ),
+);
 
-beforeEach(() => vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true));
-afterEach(() => vi.unstubAllGlobals());
-
-const { track } = buildRun(levels[0].track.points);
+const { track } = buildRun(levels[Track.One].track.points);
 const aimSpan = 2;
 //  Where the band is tied, half a metre up each post.
 const tips = [1, -1].map((side) => {
@@ -70,7 +71,11 @@ it("strings the band back through the rider while the sling is drawn, and straig
     const world = createWorld();
     const object = new Object3D();
     object.position.copy(track.pointAt(spawnDistance, 0));
-    const rider = world.spawn(SlingTrait({ charge: 0.5 }), Ref({ object }));
+    const rider = world.spawn(
+        SlingTrait({ charge: 0.5 }),
+        RunTrait,
+        RefTrait({ object }),
+    );
     const renderer = await create(
         <WorldProvider world={world}>
             <SlingPosts track={track} aimSpan={aimSpan} />
@@ -99,7 +104,7 @@ it("strings the band back through the rider while the sling is drawn, and straig
         expect(end.distanceTo(anchor)).toBeLessThan(1e-6);
     });
 
-    rider.set(SlingTrait, { enabled: false });
+    RunMachine.send(rider, "LAUNCH");
     await renderer.advanceFrames(1, 1 / 60);
     const straight = readBands();
     expect(straight).toHaveLength(1);

@@ -3,16 +3,11 @@ import { act, renderHook } from "@testing-library/react";
 import { WorldProvider } from "koota/react";
 import type { PropsWithChildren } from "react";
 import { Object3D } from "three";
-import { afterEach, expect, it } from "vitest";
-import {
-    createGameWorld,
-    Ground,
-    Ref,
-    useLoading,
-    useTime,
-} from "@spawnite/engine";
+import { afterEach, expect } from "vitest";
+import { GroundTrait, RefTrait, useLoading, useTime } from "@spawnite/engine";
 import { useSceneLoaded } from "../../src/scenes/useSceneLoaded";
 import { heroBuilder } from "../helpers/heroBuilder";
+import { it } from "@spawnite/engine/testing";
 
 afterEach(() => {
     useTime.setState(useTime.getInitialState(), true);
@@ -22,10 +17,11 @@ afterEach(() => {
 //  Her model mounts beside the World's views, which wait on their models: a
 //  drawn heroine, idle loaders and a running loop are not yet a loaded
 //  meadow.
-it("waits for the ground's views as well as her model and the loop", () => {
-    const world = createGameWorld();
+it("waits for the ground's views as well as her model and the loop", ({
+    world,
+}) => {
     heroBuilder(world).withRef(new Object3D()).spawn();
-    const ground = world.spawn(Ground);
+    const ground = world.spawn(GroundTrait);
     //  Idle, as the loop reads the loaders once the models have landed.
     useTime.setState({ running: true });
     useLoading.setState({ loading: false });
@@ -39,10 +35,9 @@ it("waits for the ground's views as well as her model and the loop", () => {
 
     //  As the ground's view registers its mesh, once its boundary commits.
     act(() => {
-        ground.add(Ref({ object: new Object3D() }));
+        ground.add(RefTrait({ object: new Object3D() }));
     });
 
     expect(result.current).toBe(true);
     unmount();
-    world.destroy();
 });

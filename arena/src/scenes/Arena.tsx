@@ -23,6 +23,10 @@ import { Instructions } from "../hud/Instructions";
 import { heroineAvatar } from "../avatars";
 import "../models";
 
+//  A room and `spawnite simulate` load this file alone, so it exports the
+//  game's plugins.
+export { plugins } from "../game";
+
 //  The arena's one scene, which the room mounts headless and every page
 //  mounts to draw it: the room spawns the monsters and coins, and on a page
 //  each Entity draws the one the room streams at its place.
@@ -99,7 +103,8 @@ function Rifle() {
 export function Arena() {
     return (
         <World map="meadow">
-            <Player avatar={heroineAvatar} />
+            {/*  Its own overlay draws each heroine's name over her bar. */}
+            <Player avatar={heroineAvatar} nameplate={false} />
             <Camera preset={CameraPreset.Shooter} />
             <Weapon
                 name="rifle"

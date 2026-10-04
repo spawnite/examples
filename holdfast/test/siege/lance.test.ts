@@ -1,11 +1,16 @@
 // @vitest-environment node
 import { createWorld, type Entity, type World } from "koota";
 import { afterEach, expect, it } from "vitest";
-import { readWeaponNumber, WeaponNumber, Weapons } from "@spawnite/engine";
-import { CardId, pickCard } from "../../src/siege/cards";
+import {
+    addStatModifier,
+    readWeaponNumber,
+    WeaponNumber,
+    WeaponsTrait,
+} from "@spawnite/engine";
+import { CardId, offerCards, pickCard } from "../../src/siege/cards";
 import { lanceSettings, lanceWeapon } from "../../src/siege/lance";
 import { openSiege } from "./room";
-import { declareWardenStats } from "../../src/siege/stats";
+import { declareWardenStats, WardenStat } from "../../src/siege/stats";
 import { WardenTrait } from "../../src/siege/traits";
 
 let world: World | undefined;
@@ -25,7 +30,7 @@ function spawnWarden() {
 
 /** Has her take `id`, as a pick from an offer of one. */
 function takeCard(warden: Entity, id: CardId) {
-    warden.set(WardenTrait, { offer: [id], taken: "" });
+    warden.set(WardenTrait, { offer: offerCards([id]), taken: "" });
     pickCard(warden, 0);
 }
 
@@ -46,13 +51,13 @@ function readLance(warden: Entity) {
 it("arms the room's judge with the lance the scene registers", async () => {
     const siege = await openSiege();
 
-    const registered = siege.world.get(Weapons)?.get(lanceWeapon);
+    const registered = siege.world.get(WeaponsTrait)?.get(lanceWeapon);
     await siege.close();
 
-    expect(registered).toBe(lanceSettings);
+    expect(registered).toEqual(lanceSettings);
 });
 
-it("gives the lance no damage and no rate until she takes the Storm Lance", () => {
+it("gives the lance no damage and no rate until she takes the Lance card", () => {
     const warden = spawnWarden();
     const before = readLance(warden);
 
@@ -66,6 +71,20 @@ it("gives the lance no damage and no rate until she takes the Storm Lance", () =
     expect(after.pierce).toBeGreaterThanOrEqual(8);
 });
 
+it("leaves the lance as it was under the pellets and pierce a gun's tiers add", () => {
+    const warden = spawnWarden();
+    takeCard(warden, CardId.StormLance);
+    const before = readLance(warden);
+
+    addStatModifier(warden, WardenStat.GunPellets, { source: "gun", flat: 2 });
+    addStatModifier(warden, WardenStat.GunPierce, { source: "gun", flat: 2 });
+
+    expect(readLance(warden)).toEqual(before);
+    expect(readWeaponNumber(lanceSettings, warden, WeaponNumber.Pellets)).toBe(
+        1,
+    );
+});
+
 it("raises the lance with Heavy Rounds and Hair Trigger as it does the blaster", () => {
     const warden = spawnWarden();
     takeCard(warden, CardId.StormLance);
@@ -76,6 +95,6 @@ it("raises the lance with Heavy Rounds and Hair Trigger as it does the blaster",
     takeCard(warden, CardId.HairTrigger);
 
     const after = readLance(warden);
-    expect(after.damage).toBeCloseTo(before.damage * 1.25, 5);
-    expect(after.shotsPerSecond).toBeCloseTo(before.shotsPerSecond * 1.2, 5);
+    expect(after.damage).toBeCloseTo(before.damage * 1.15, 5);
+    expect(after.shotsPerSecond).toBeCloseTo(before.shotsPerSecond * 1.12, 5);
 });

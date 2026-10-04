@@ -1,9 +1,13 @@
 import { createQuery, type World } from "koota";
 import type { Vector3 } from "three";
-import { Transform, updateEach, type StepOptions } from "@spawnite/engine/core";
+import {
+    TransformTrait,
+    updateEach,
+    type StepOptions,
+} from "@spawnite/engine/core";
 import {
     BurstTrait,
-    Lifetime,
+    LifetimeTrait,
     type BurstKind,
     type MonsterKind,
 } from "./traits";
@@ -19,21 +23,23 @@ export interface BurstSpawn {
     position: Vector3;
     monster?: MonsterKind;
     size?: number;
+    /** The key the stream names a recalled monster by. */
+    monsterId?: string;
 }
 
 /** A short effect every page draws at `position`. */
 export function spawnBurst(
     world: World,
-    { kind, position, monster, size = 1 }: BurstSpawn,
+    { kind, position, monster, size = 1, monsterId = "" }: BurstSpawn,
 ) {
     return world.spawn(
-        Transform(position.clone()),
-        BurstTrait({ kind, size, ...(monster && { monster }) }),
-        Lifetime({ seconds: burstSeconds }),
+        TransformTrait(position.clone()),
+        BurstTrait({ kind, size, monsterId, ...(monster && { monster }) }),
+        LifetimeTrait({ seconds: burstSeconds }),
     );
 }
 
-const mortals = createQuery(Lifetime);
+const mortals = createQuery(LifetimeTrait);
 
 /** Counts each entity's lifetime down and takes it away once it runs out. */
 export function expireEntities(world: World, { deltaSeconds }: StepOptions) {

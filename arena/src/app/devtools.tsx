@@ -2,8 +2,8 @@ import type { Entity } from "koota";
 import { useQuery, useTrait } from "koota/react";
 import { Devtools } from "@spawnite/devtools";
 import {
-    NetworkId,
-    PlayerName,
+    NetworkIdTrait,
+    PlayerNameTrait,
     Text,
     useRoom,
     WireFormat,
@@ -20,7 +20,7 @@ interface PlayerRowProps {
 /** One player's name, read off her own trait the way the scoreboard does,
  *  so a late join shows without the panel re-querying. */
 function PlayerRow({ entity }: PlayerRowProps) {
-    const player = useTrait(entity, PlayerName);
+    const player = useTrait(entity, PlayerNameTrait);
     return <Text>{player?.name ?? ""}</Text>;
 }
 
@@ -56,7 +56,7 @@ export function RoomPanel() {
         interpolationMilliseconds,
         refusedShotOrigins,
     } = useRoom();
-    const players = useQuery(NetworkId, PlayerName);
+    const players = useQuery(NetworkIdTrait, PlayerNameTrait);
     const json =
         new URLSearchParams(window.location.search).get("wire") ===
         WireFormat.Json;

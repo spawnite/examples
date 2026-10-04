@@ -1,9 +1,11 @@
 import { Html } from "@react-three/drei";
 import type { Entity } from "koota";
-import { useQueryFirst, useTrait } from "koota/react";
-import { Bar, isPlayerHero, PlayerName, Text } from "@spawnite/engine";
+import { useHas, useQueryFirst, useTrait } from "koota/react";
+import { Bar, isPlayerHero, PlayerNameTrait, Text } from "@spawnite/engine";
 import { reviveSeconds } from "../siege/downs";
-import { SiegePhase, SiegeTrait, WardenTrait } from "../siege/traits";
+import { EndCause, SiegeTrait } from "../siege/traits";
+import { LifeMachine, LifeTrait } from "../siege/life";
+import { usePhase } from "./phase";
 
 interface DownedMarkerProps {
     entity: Entity;
@@ -11,14 +13,18 @@ interface DownedMarkerProps {
 
 /** Over a downed teammate while the run is on: her name, a call for help,
  *  and how far she is from getting up. Nothing over a warden on her feet,
- *  or over the page's own, whose screen says it. */
+ *  over the page's own, whose screen says it, or on the run's last fall,
+ *  when nobody can get her up. */
 export function DownedMarker({ entity }: DownedMarkerProps) {
-    const survivor = useTrait(entity, WardenTrait);
-    const player = useTrait(entity, PlayerName);
+    const down = useHas(entity, LifeMachine.is.down);
+    const revived = useTrait(entity, LifeTrait)?.revived ?? 0;
+    const player = useTrait(entity, PlayerNameTrait);
     const siege = useTrait(useQueryFirst(SiegeTrait), SiegeTrait);
+    const phase = usePhase();
     if (
-        !survivor?.down ||
-        siege?.phase === SiegePhase.Over ||
+        !down ||
+        phase === "over" ||
+        (siege?.cause ?? EndCause.None) !== EndCause.None ||
         isPlayerHero(entity)
     )
         return null;
@@ -33,7 +39,7 @@ export function DownedMarker({ entity }: DownedMarkerProps) {
             <Text size="lg">Get {player?.name ?? "her"} up</Text>
             <Bar
                 label={`${player?.name ?? "Her"} getting up`}
-                value={survivor.reviveSeconds}
+                value={revived}
                 maximum={reviveSeconds}
             />
         </Html>

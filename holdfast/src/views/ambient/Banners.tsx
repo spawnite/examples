@@ -10,7 +10,7 @@ import {
     SphereGeometry,
 } from "three";
 import {
-    Ground,
+    GroundTrait,
     useHeadless,
     useWorldEntity,
     type Position,
@@ -141,7 +141,7 @@ export function Banners() {
 }
 
 function Standards() {
-    const surface = useWorldEntity().get(Ground)?.surface;
+    const surface = useWorldEntity().get(GroundTrait)?.surface;
     const wind = useMemo(() => ({ value: 0 }), []);
     const cloth = useMemo(() => {
         const material = new MeshStandardMaterial({

@@ -1,11 +1,10 @@
 // @vitest-environment node
-import { afterEach, expect, it } from "vitest";
+import { expect } from "vitest";
 import {
     addStatModifier,
     dumpKey,
     stepSeconds,
     TrackMoverTrait,
-    type HeadlessGame,
 } from "@spawnite/engine/core";
 import {
     attachDevtools,
@@ -14,20 +13,15 @@ import {
     useDevtools,
 } from "@spawnite/engine/devtools";
 import { frames, startRide } from "./rider";
+import { it, type CreateGame } from "@spawnite/engine/testing";
 
-const games: HeadlessGame[] = [];
-afterEach(() => {
-    for (const game of games.splice(0)) game.world.destroy();
-});
-
-async function start() {
-    const ride = await startRide();
-    games.push(ride.game);
+async function start(createGame: CreateGame) {
+    const ride = await startRide(createGame);
     return ride;
 }
 
-it("rides at today's side speed and drag", async () => {
-    const { game, rider } = await start();
+it("rides at today's side speed and drag", async ({ createGame }) => {
+    const { game, rider } = await start(createGame);
     stepSeconds(game, frames(1));
     expect(rider.get(TrackMoverTrait)).toMatchObject({
         sideSpeed: 3.5,
@@ -35,8 +29,8 @@ it("rides at today's side speed and drag", async () => {
     });
 });
 
-it("rides on the side and drag stats' modifiers", async () => {
-    const { game, rider } = await start();
+it("rides on the side and drag stats' modifiers", async ({ createGame }) => {
+    const { game, rider } = await start(createGame);
     addStatModifier(rider, "side", { source: "sled", more: 0.02 });
     addStatModifier(rider, "drag", { source: "sled", more: 1 / 1.02 ** 2 - 1 });
     stepSeconds(game, frames(1));
@@ -45,8 +39,10 @@ it("rides on the side and drag stats' modifiers", async () => {
     expect(mover?.drag).toBeCloseTo(0.004 / 1.02 ** 2, 8);
 });
 
-it("tunes the side speed and drag in the devtools through their stats, under the stats' modifiers", async () => {
-    const { game, rider } = await start();
+it("tunes the side speed and drag in the devtools through their stats, under the stats' modifiers", async ({
+    createGame,
+}) => {
+    const { game, rider } = await start(createGame);
     const detach = attachDevtools(game);
     //  The rows the Rider's Entity and TrackMover register.
     const forget = [

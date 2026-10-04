@@ -1,26 +1,20 @@
 // @vitest-environment node
-import { afterEach, expect, it } from "vitest";
+import { expect } from "vitest";
 import {
-    Authority,
-    createHeadlessGame,
+    AuthorityTrait,
     RunContext,
     stepSeconds,
-    Transform,
+    TransformTrait,
     TrackMoverTrait,
-    TrackRef,
-    type HeadlessGame,
+    TrackRefTrait,
 } from "@spawnite/engine/core";
 import { buildRun } from "../../src/levels";
 import { rideGravity } from "../../src/ride/rider";
-import { systems } from "../../src/systems";
+import { plugins } from "../../src/game";
+import { it, type CreateGame } from "@spawnite/engine/testing";
 
 //  The old TrackMover's snow drag, 1.14/s per metre of snow under the
 //  sled, on level 1's lane: 6.3 m, with 3 m of shoulder each side.
-
-const games: HeadlessGame[] = [];
-afterEach(() => {
-    for (const game of games.splice(0)) game.world.destroy();
-});
 
 //  Level, 40 m of snow lane, then 40 m of swept ice from 60 m on.
 const { track } = buildRun([
@@ -33,13 +27,17 @@ const shoulderEdge = 6.3 / 2 + 3;
 
 /** The speed left after a second at 10 m/s from `distance` and `lateral`,
  *  with the air's drag off so the snow's is all there is. */
-async function speedAfterASecond(distance: number, lateral: number) {
-    const game = await createHeadlessGame({
-        systems,
+async function speedAfterASecond(
+    createGame: CreateGame,
+    distance: number,
+    lateral: number,
+) {
+    const game = await createGame({
+        plugins,
         scene: (world) => {
             world.spawn(
-                Transform,
-                Authority({ context: RunContext.Client }),
+                TransformTrait,
+                AuthorityTrait({ context: RunContext.Client }),
                 TrackMoverTrait({
                     distance,
                     lateral,
@@ -47,11 +45,10 @@ async function speedAfterASecond(distance: number, lateral: number) {
                     drag: 0,
                     gravity: rideGravity,
                 }),
-                TrackRef({ track }),
+                TrackRefTrait({ track }),
             );
         },
     });
-    games.push(game);
     stepSeconds(game, 1);
     return game.world.queryFirst(TrackMoverTrait)?.get(TrackMoverTrait)?.speed;
 }
@@ -59,20 +56,23 @@ async function speedAfterASecond(distance: number, lateral: number) {
 //  Each step takes `perSecond` / 60 of the speed.
 const after = (perSecond: number) => 10 * (1 - perSecond / 60) ** 60;
 
-it("costs the old 0.04/s on a snow lane", async () => {
+it("costs the old 0.04/s on a snow lane", async ({ createGame }) => {
     expect(track.frictionAt(10, 0)).toBeCloseTo(0.035 * 1.14, 6);
-    expect(await speedAfterASecond(10, 0)).toBeCloseTo(after(0.0399), 3);
+    expect(await speedAfterASecond(createGame, 10, 0)).toBeCloseTo(
+        after(0.0399),
+        3,
+    );
 });
 
-it("costs the old 0.4/s at a shoulder's outer edge", async () => {
+it("costs the old 0.4/s at a shoulder's outer edge", async ({ createGame }) => {
     expect(track.frictionAt(10, -shoulderEdge)).toBeCloseTo(0.35 * 1.14, 6);
-    expect(await speedAfterASecond(10, shoulderEdge)).toBeCloseTo(
+    expect(await speedAfterASecond(createGame, 10, shoulderEdge)).toBeCloseTo(
         after(0.399),
         3,
     );
 });
 
-it("costs nothing on swept ice", async () => {
+it("costs nothing on swept ice", async ({ createGame }) => {
     expect(track.frictionAt(70, 0)).toBe(0);
-    expect(await speedAfterASecond(70, 0)).toBeCloseTo(10, 6);
+    expect(await speedAfterASecond(createGame, 70, 0)).toBeCloseTo(10, 6);
 });

@@ -1,18 +1,22 @@
 import { useFrame } from "@react-three/fiber";
-import { useLayoutEffect, useMemo } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import {
     AdditiveBlending,
     BufferAttribute,
     BufferGeometry,
     ShaderMaterial,
+    type Group,
 } from "three";
 import { hashKeys, useTime } from "@spawnite/engine";
+import { hearthGrowth, hearthWarmth } from "./warmth";
 
 //  The hearth's fire: tongues of flame drawn as quads that turn to face the
 //  camera about the upright, each rising, swaying and thinning over its own
 //  short life round a steady hot core, and sparks drifting up out of it.
-//  Every quad and spark moves in its vertex shader, so a frame writes only
-//  the time.
+//  Between waves it roars up, as the hearth's warmth says, and it burns
+//  bigger each level the wardens feed it to. Every quad and
+//  spark moves in its vertex shader, so a frame writes only the time and
+//  the warmth.
 
 /** Flame quads: the core first, the tongues after. */
 const tongueCount = 12;
@@ -60,14 +64,15 @@ const flameVertex = /* glsl */ `
 attribute vec2 corner;
 attribute vec4 seed;
 uniform float uTime;
+uniform float uSwell;
 varying vec2 vUv;
 varying float vLife;
 varying float vCore;
 varying float vSeed;
 void main() {
     vCore = seed.y == 0.0 ? 1.0 : 0.0;
-    float life = vCore > 0.5 ? 0.35 : fract(uTime * seed.y + seed.x);
-    float size = seed.w;
+    float life = vCore > 0.5 ? 0.35 : fract(uTime * seed.y * (1.0 + uSwell * 0.35) + seed.x);
+    float size = seed.w * (1.0 + uSwell * 0.45);
     vec3 center = vec3(cos(seed.z), 0.0, sin(seed.z)) * 0.28 * (1.0 - life) * (1.0 - vCore);
     center.y = life * 0.55 * (1.0 - vCore) + 0.12;
     center.x += sin(uTime * 3.1 + seed.x * 20.0) * 0.1 * life;
@@ -119,7 +124,11 @@ void main() {
     vec3 color = mix(deep, flame, smoothstep(0.0, 0.5, heat + vCore * 0.2));
     color = mix(color, core, smoothstep(0.45, 0.9, heat) * (0.5 + vCore * 0.3));
     float strength = body * fade * (vCore > 0.5 ? 0.6 : 0.75);
-    gl_FragColor = vec4(color * strength * 1.15, 1.0);
+    //  Alpha carries the strength, so an empty corner of the quad is
+    //  transparent to the ambient occlusion's transparency pass, which drew
+    //  each quad at alpha 1 as a faint box; additive blending scales the
+    //  colour by it, so the fire looks as it did.
+    gl_FragColor = vec4(color * 1.15, strength);
 }`;
 
 function buildSparkGeometry() {
@@ -146,13 +155,14 @@ function buildSparkGeometry() {
 const sparkVertex = /* glsl */ `
 attribute vec4 seed;
 uniform float uTime;
+uniform float uSwell;
 varying float vLife;
 void main() {
-    float life = fract(uTime * seed.y + seed.x);
+    float life = fract(uTime * seed.y * (1.0 + uSwell * 0.6) + seed.x);
     float drift = seed.w * life;
     vec3 place = vec3(
         cos(seed.z) * (0.1 + drift * 0.6) + sin(uTime * 2.3 + seed.x * 30.0) * 0.12 * life,
-        0.35 + life * (2.2 + seed.w),
+        0.35 + life * (2.2 + seed.w) * (1.0 + uSwell * 0.5),
         sin(seed.z) * (0.1 + drift * 0.6) + cos(uTime * 1.9 + seed.x * 17.0) * 0.12 * life);
     vec4 view = modelViewMatrix * vec4(place, 1.0);
     gl_Position = projectionMatrix * view;
@@ -167,14 +177,14 @@ void main() {
     float glow = pow(max(1.0 - fromMiddle, 0.0), 1.6);
     float fade = smoothstep(0.0, 0.08, vLife) * (1.0 - smoothstep(0.5, 1.0, vLife));
     vec3 color = mix(vec3(1.0, 0.7, 0.3), vec3(1.0, 0.35, 0.08), vLife);
-    gl_FragColor = vec4(color * glow * fade * 1.6, 1.0);
+    gl_FragColor = vec4(color * 1.6, glow * fade);
 }`;
 
 function buildMaterial(vertexShader: string, fragmentShader: string) {
     return new ShaderMaterial({
         vertexShader,
         fragmentShader,
-        uniforms: { uTime: { value: 0 } },
+        uniforms: { uTime: { value: 0 }, uSwell: { value: 0 } },
         transparent: true,
         depthWrite: false,
         blending: AdditiveBlending,
@@ -196,14 +206,18 @@ export function Fire() {
         },
         [flameGeometry, sparkGeometry, flames, sparks],
     );
+    const growthRef = useRef<Group>(null);
     useFrame(() => {
+        growthRef.current?.scale.setScalar(hearthGrowth.size);
         const seconds = useTime.getState().seconds;
         flames.uniforms.uTime.value = seconds;
         sparks.uniforms.uTime.value = seconds;
+        flames.uniforms.uSwell.value = hearthWarmth.value;
+        sparks.uniforms.uSwell.value = hearthWarmth.value;
     });
 
     return (
-        <>
+        <group ref={growthRef}>
             <mesh
                 geometry={flameGeometry}
                 material={flames}
@@ -216,6 +230,6 @@ export function Fire() {
                 frustumCulled={false}
                 renderOrder={2}
             />
-        </>
+        </group>
     );
 }

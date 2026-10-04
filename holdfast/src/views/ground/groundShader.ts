@@ -1,3 +1,6 @@
+import { hearthMetres, ringMetres } from "../layout";
+import { trackGround } from "../world/land";
+
 //  The ground's paint, as GLSL the ground's standard material splices into
 //  its own shaders: albedo, roughness and a normal from four photographed
 //  surfaces, grass, packed earth, the ring's cobbles and the hearth's
@@ -34,14 +37,21 @@ float fractalGround(vec2 point) {
 }
 `;
 
+/** The uniforms the layout reads, by name: the ring's radius and half
+ *  width and the hearth's radius, in metres. */
+export const groundLayoutUniforms = {
+    uRing: ringMetres.radius,
+    uRingHalfWidth: ringMetres.halfWidth,
+    uHearth: hearthMetres,
+};
+
 /** GLSL, for the vertex and the fragment shader alike: where each surface
  *  lies, from the world position, the road's weight and the ground's
  *  upward share, and the grass's colour at a place. No screen derivative,
- *  so a vertex can read it. */
+ *  so a vertex can read it. Each shader declares groundLayoutUniforms
+ *  ahead of it. */
 export const groundLayout = /* glsl */ `
-uniform float uRing;
-uniform float uRingHalfWidth;
-uniform float uHearth;
+${trackGround}
 
 struct GroundLayout {
     // Above about 0.5 the grass gives way to packed earth.
@@ -62,35 +72,37 @@ GroundLayout layoutGround(vec2 at, float roadWeight, float up) {
     float radius = length(at);
     float ragged = fractalGround(at * 0.6 + 3.0) - 0.5;
     float patches = fractalGround(at * 0.17 + 5.3);
-    // Packed earth: the map's roads, the ring's verges, the hearth's rim
-    // and the trodden middle, each with a ragged edge where grass holds on.
-    float road = roadWeight + ragged * 0.7;
+    // Packed earth: the map's roads and the tracks they run on as, the
+    // ring's verges, the hearth's rim and the trodden middle, each with a
+    // ragged edge where grass holds on.
+    float roadShare = max(roadWeight, trackGround(at));
+    float road = roadShare + ragged * 0.7;
     float ringDistance = abs(radius - uRing);
     float verge = 1.0 - smoothstep(uRingHalfWidth, uRingHalfWidth + 1.4, ringDistance);
     float rim = 1.0 - smoothstep(uHearth, uHearth + 1.1, radius);
     float trodden = (1.0 - smoothstep(4.0, 10.0, radius)) * 0.25;
     site.wear = max(road, max(max(verge, rim), trodden) + ragged * 0.8 + (patches - 0.5) * 0.3);
-    site.forest = smoothstep(29.0, 38.0, radius + ragged * 4.0) * (1.0 - smoothstep(0.3, 0.6, roadWeight));
-    site.steep = smoothstep(0.93, 0.8, up + ragged * 0.08);
+    site.forest = smoothstep(34.0, 42.0, radius + ragged * 4.0) * (1.0 - smoothstep(0.3, 0.6, roadShare));
+    site.steep = 1.0 - smoothstep(0.66, 0.8, up + ragged * 0.08);
     site.ring = 1.0 - smoothstep(uRingHalfWidth - 0.3, uRingHalfWidth + 0.1, ringDistance + ragged * 0.7);
     site.hearth = 1.0 - smoothstep(uHearth - 0.5, uHearth, radius + ragged * 0.9);
     site.ragged = ragged;
     return site;
 }
 
-// The grass's colour at a place, in linear light: a deep green in the
-// broad hollows, a mid green, a warm yellow-green in patches, moss-dark
+// The grass's colour at a place, in linear light: a cool deep green in the
+// broad hollows, a mid green, a yellow-green in patches, moss-dark
 // clumps and dry straw. The ground's grass and the blades both take it.
 vec3 colourGrass(vec2 at) {
     float broad = fractalGround(at * 0.045);
     float patches = fractalGround(at * 0.17 + 5.3);
     float clump = fractalGround(at * 0.85 + 17.0);
-    vec3 grass = mix(vec3(0.06, 0.11, 0.03), vec3(0.13, 0.21, 0.05), smoothstep(0.25, 0.65, broad));
-    grass = mix(grass, vec3(0.24, 0.27, 0.07), smoothstep(0.5, 0.78, patches) * 0.7);
+    vec3 grass = mix(vec3(0.04, 0.1, 0.045), vec3(0.09, 0.2, 0.075), smoothstep(0.25, 0.65, broad));
+    grass = mix(grass, vec3(0.2, 0.26, 0.08), smoothstep(0.5, 0.78, patches) * 0.55);
     float moss = smoothstep(0.56, 0.7, clump) * (1.0 - smoothstep(0.5, 0.75, patches));
     grass = mix(grass, vec3(0.04, 0.085, 0.035), moss * 0.8);
     float dry = smoothstep(0.64, 0.8, fractalGround(at * 0.11 + 31.0));
-    return mix(grass, vec3(0.28, 0.23, 0.1), dry * 0.55);
+    return mix(grass, vec3(0.28, 0.23, 0.1), dry * 0.4);
 }
 `;
 
@@ -165,6 +177,9 @@ varying vec3 vGroundPosition;
 varying vec3 vGroundNormal;
 varying float vRoadWeight;
 ${layerUniforms}
+uniform float uRing;
+uniform float uRingHalfWidth;
+uniform float uHearth;
 ${groundNoise}
 ${groundLayout}
 
@@ -218,7 +233,13 @@ vec3 paintGround(vec3 world) {
     float clump = fractalGround(at * 0.85 + 17.0);
     float patches = fractalGround(at * 0.17 + 5.3);
 
+    // The land past the map is forest floor and track alone, so it reads
+    // no grass.
+#ifdef GROUND_LAND
+    GroundSample grass = GroundSample(vec3(1.0), vec2(0.0), 1.0);
+#else
     GroundSample grass = sampleGround(uGrassColor, uGrassDetail, at, uGrassTile, uGrassMean, 0.0);
+#endif
     vec3 color = grass.color * colourGrass(at);
     vec2 slope = grass.slope;
     float roughness = mix(0.85, 1.0, grass.roughness);
@@ -237,7 +258,10 @@ vec3 paintGround(vec3 world) {
     // The grass's tufts hold on over the earth's hollows: each surface's
     // brightness pushes the edge, so it follows the photographs.
     float edge = (lumaGround(grass.color) - lumaGround(earth.color)) * 0.18;
-    float earthShare = max(smoothstep(0.42, 0.62, site.wear - edge), max(site.forest, site.steep * 0.85));
+    // Past the forest's edge every surface is earth, litter or a road's,
+    // so no strip of grass lights up along a road's verge in the wood.
+    float wooded = smoothstep(34.0, 42.0, radius + site.ragged * 4.0);
+    float earthShare = max(max(smoothstep(0.42, 0.62, site.wear - edge), wooded), max(site.forest, site.steep * 0.85));
     color = mix(color, earth.color * earthColor, earthShare);
     slope = mix(slope, earth.slope * 1.2, earthShare);
     roughness = mix(roughness, mix(0.88, 1.0, earth.roughness), earthShare);

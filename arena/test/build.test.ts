@@ -1,9 +1,8 @@
 // @vitest-environment node
 import { realpathSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { build, normalizePath, type Plugin } from "vite";
+import { checkGameBuild } from "@spawnite/engine/vite";
+import { normalizePath } from "vite";
 import { beforeAll, expect, it } from "vitest";
 
 const arenaFolder = path.resolve(import.meta.dirname, "..");
@@ -17,48 +16,21 @@ function findPackageFolder(name: string) {
 const engineFolder = findPackageFolder("@spawnite/engine");
 const devtoolsFolder = findPackageFolder("@spawnite/devtools");
 
-//  Every module the production build put into a chunk, read off the bundle
-//  itself, so a devtools module that survives in any form is caught, however
-//  the minifier renamed it.
-function recordModules(moduleIds: string[]): Plugin {
-    return {
-        name: "record-modules",
-        generateBundle(_options, bundle) {
-            for (const output of Object.values(bundle)) {
-                if (output.type === "chunk")
-                    moduleIds.push(...output.moduleIds);
-            }
-        },
-    };
-}
-
-const moduleIds: string[] = [];
+let moduleIds: string[] = [];
 let html = "";
 
+//  The engine's check holds the standalone build under this repository's ceiling
+//  and keeps zod's classic API out.
 beforeAll(async () => {
-    const outDir = await mkdtemp(path.join(tmpdir(), "arena-build-"));
-    //  Vitest runs under NODE_ENV=test, and Vite reads NODE_ENV rather than
-    //  the mode to decide import.meta.env.DEV. The build a deploy runs sees
-    //  production, so this one must too.
-    const testEnvironment = process.env.NODE_ENV;
-    const roomsDomain = process.env.ROOMS_DOMAIN;
-    process.env.NODE_ENV = "production";
     //  The deploy names the rooms domain, as the repository's variable.
-    process.env.ROOMS_DOMAIN = "rooms.test";
-    try {
-        await build({
-            root: arenaFolder,
-            logLevel: "silent",
-            build: { outDir, emptyOutDir: true },
-            plugins: [recordModules(moduleIds)],
-        });
-        html = await readFile(path.join(outDir, "index.html"), "utf8");
-    } finally {
-        process.env.NODE_ENV = testEnvironment;
-        if (roomsDomain === undefined) delete process.env.ROOMS_DOMAIN;
-        else process.env.ROOMS_DOMAIN = roomsDomain;
-        await rm(outDir, { recursive: true, force: true });
-    }
+    const bundle = await checkGameBuild(arenaFolder, {
+        env: { ROOMS_DOMAIN: "rooms.test" },
+    });
+    moduleIds = Object.values(bundle).flatMap((output) =>
+        output.type === "chunk" ? output.moduleIds : [],
+    );
+    const page = bundle["index.html"];
+    html = page.type === "asset" ? String(page.source) : "";
 }, 120_000);
 
 it("leaves the devtools out of a production build", () => {

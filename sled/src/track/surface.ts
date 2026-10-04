@@ -1,7 +1,7 @@
 import { MathUtils, type Vector3 } from "three";
 import { buildTrackSurface, type TrackSectionPoint } from "@spawnite/engine";
 import type { Run } from "../levels";
-import { palette, rgb } from "../palette";
+import { rgb } from "../palette";
 import { driftLift, driftPatch, patchTone } from "./drift";
 import { hillsideAt } from "./hillside";
 import {
@@ -50,19 +50,18 @@ export const section: TrackSectionPoint[] = [
     })),
 ];
 
-const snowColor = rgb(palette.snowSurface);
-const iceColor = rgb(palette.iceSurface);
-
 function mix(a: number[], b: number[], t: number) {
     return a.map((value, index) => MathUtils.lerp(value, b[index], t));
 }
 
 /** The drawn run: the snow and its drift on the ride surface, the fence,
- *  and the hillside past it, grouped as snow and ice; and the engine's
- *  terrain from the hillside's rim out to the horizon, the old sled's
- *  alpine relief. */
+ *  and the hillside past it, grouped as snow and ice, in the map's paint;
+ *  and the engine's terrain from the hillside's rim out to the horizon,
+ *  the old sled's alpine relief. */
 export function buildSlopeSurface(run: Run) {
-    const { track } = run;
+    const { track, map } = run;
+    const snowColor = rgb(map.paint.snow);
+    const iceColor = rgb(map.paint.ice);
     const laneAt = (along: number): Lane => ({
         halfWidth: track.frameAt(along).halfWidth - shoulderWidth,
         ice: track.zoneWeight(along, "ice"),
@@ -103,6 +102,6 @@ export function buildSlopeSurface(run: Run) {
         lift,
         paint,
         tile: tileMetres,
-        terrain: {},
+        terrain: { height: map.terrain.height },
     });
 }

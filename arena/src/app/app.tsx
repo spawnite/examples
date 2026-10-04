@@ -6,8 +6,8 @@ import {
     WireFormat,
     type RoomOptions,
 } from "@spawnite/engine";
+import { plugins } from "../game";
 import { Scoreboard } from "../hud/Scoreboard";
-import { MicrophoneButton } from "../hud/MicrophoneButton";
 import { Arena } from "../scenes/Arena";
 
 //  Every map file under src/maps, each by its file name.
@@ -52,10 +52,9 @@ export function App() {
     const [room] = useState(() => readRoomOptions(window.location.search));
 
     return (
-        <Game name="arena" start="arena" room={room}>
+        <Game name="arena" start="arena" room={room} plugins={plugins}>
             <Scene name="arena" component={Arena} />
             <Scoreboard />
-            <MicrophoneButton />
             {ArenaDevtools && (
                 <Suspense fallback={null}>
                     <ArenaDevtools />

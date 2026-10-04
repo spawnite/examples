@@ -1,5 +1,10 @@
 @import "@spawnite/ui/styles.css";
 
+/*  Game fills its parent, so the page's root takes the whole screen. */
+#root {
+    height: 100dvh;
+}
+
 /*  Tailwind finds classes only under this app's own folder, and the packages
     that draw the HUD sit outside it. */
 @source "../../../packages/ui/src";

@@ -1,37 +1,20 @@
-import chifa from "@game/assets/avatars/chifa.vrm?url";
-import fris from "@game/assets/avatars/fris.vrm?url";
-import { useGLTF } from "@react-three/drei";
-import { extendVrmLoader, MOTION_URLS, type VrmBody } from "@spawnite/engine";
+import records from "@spawnite/assets/avatars.json";
+import chifa from "@spawnite/assets/avatars/chifa.vrm?url";
+import fris from "@spawnite/assets/avatars/fris.vrm?url";
+import {
+    extendVrmLoader,
+    listMotionUrls,
+    useModel,
+    type VrmBody,
+} from "@spawnite/engine";
 
 //  The wardens' bodies: the two avatars the platform ships, worn in turn by
-//  join order. Their tuning is the mmorpg's (games/mmorpg/src/avatars.ts),
-//  where each was fitted to the engine's clips.
-
+//  join order.
+//  JSON types a bone name as a plain string.
+const shipped = records as Record<"fris" | "chifa", Omit<VrmBody, "model">>;
 const bodies: VrmBody[] = [
-    {
-        model: fris,
-        scale: 1,
-        armSpread: {
-            left: { out: 0.27, forward: 0.06 },
-            right: { out: 0.1, forward: 0 },
-        },
-        armColliders: {
-            radii: { upperArm: 0.06, lowerArm: 0.055, hand: 0.045 },
-            bonePrefix: "Skirt_",
-        },
-    },
-    {
-        model: chifa,
-        scale: 1,
-        armSpread: {
-            left: { out: 0, forward: 0 },
-            right: { out: 0, forward: 0 },
-        },
-        armColliders: {
-            radii: { upperArm: 0.06, lowerArm: 0.025, hand: 0.045 },
-            bonePrefix: "Cape",
-        },
-    },
+    { ...shipped.fris, model: fris },
+    { ...shipped.chifa, model: chifa },
 ];
 
 /** The body a warden of `hue` wears. Its address carries the hue as a
@@ -46,12 +29,9 @@ export function createWardenBody(hue: number): VrmBody {
 /** Starts fetching the first two wardens' bodies and every clip while the
  *  page shows its menu, so a run opens on bodies rather than on nothing. */
 export function preloadWardenBodies() {
+    //  In the list shapes the engine's VrmView and HeroAnimationView read,
+    //  since the loader's cache keys on the whole list.
     for (const hue of [0, 1])
-        useGLTF.preload(
-            createWardenBody(hue).model,
-            false,
-            false,
-            extendVrmLoader,
-        );
-    useGLTF.preload(MOTION_URLS, false, false, extendVrmLoader);
+        useModel.preload([createWardenBody(hue).model], extendVrmLoader);
+    useModel.preload(listMotionUrls(), extendVrmLoader);
 }

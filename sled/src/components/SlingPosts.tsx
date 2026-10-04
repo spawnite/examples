@@ -4,15 +4,15 @@ import { useQueryFirst } from "koota/react";
 import { Vector3, type Mesh } from "three";
 import {
     InstancedModel,
-    Ref,
+    RefTrait,
     registerModel,
     type InstancePlacement,
     type Track,
 } from "@spawnite/engine";
-import post from "@game/assets/models/sled/sling-post-wood.glb?url";
+import post from "@spawnite/assets/models/sled/sling-post-wood.glb?url";
 import { palette } from "../palette";
 import { spawnDistance } from "../ride/rider";
-import { pullMaximum, SlingTrait } from "../ride/sling";
+import { isAiming, pullMaximum, SlingTrait } from "../ride/sling";
 
 const postModel = "sling-post";
 registerModel(postModel, post);
@@ -45,7 +45,7 @@ function readBandPoint(track: Track, lateral: number) {
  *  Once the sling fires the band snaps straight across. Drawn only. */
 export function SlingPosts({ track, aimSpan }: SlingPostsProps) {
     //  Found again when the rider changes, not with a query every frame.
-    const rider = useQueryFirst(SlingTrait, Ref);
+    const rider = useQueryFirst(SlingTrait, RefTrait);
     const { tips, posts } = useMemo(() => {
         const tips = [1, -1].map((side) =>
             readBandPoint(track, side * (aimSpan + postClearance)),
@@ -64,8 +64,8 @@ export function SlingPosts({ track, aimSpan }: SlingPostsProps) {
 
     useFrame(() => {
         const sling = rider?.get(SlingTrait);
-        const object = rider?.get(Ref)?.object;
-        const drawn = sling?.enabled && object;
+        const object = rider?.get(RefTrait)?.object;
+        const drawn = rider && isAiming(rider) && sling && object;
         //  The rider faces negative z, so its pull is back along positive z.
         if (drawn)
             anchor

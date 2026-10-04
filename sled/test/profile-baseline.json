@@ -1,17 +1,23 @@
 {
     "screenDraws": 1,
-    "renderTargetDraws": 54,
+    "renderTargetDraws": 56,
     "screenTriangles": 1,
-    "renderTargetTriangles": 767746,
+    "renderTargetTriangles": 802136,
     "screenInstances": 0,
-    "renderTargetInstances": 436,
+    "renderTargetInstances": 466,
     "screenMultiDraws": 0,
     "renderTargetMultiDraws": 0,
     "screenSubDraws": 0,
     "renderTargetSubDraws": 0,
-    "programSwitches": 16,
+    "programs": 13,
     "programLinks": 0,
     "textureUploads": 0,
     "bufferUploads": 0,
-    "garbageBytesPerFrame": 20754
+    "garbageBytesPerFrame": 59229,
+    "stillTextureUploads": 0,
+    "stillBufferUploads": 0,
+    "paintsPerSecond": 0,
+    "rasterTasksPerSecond": 0,
+    "jump": false,
+    "fps": 60
 }

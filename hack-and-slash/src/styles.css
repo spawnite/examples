@@ -1,0 +1,66 @@
+/*  The house look. The engine re-exports the primitives, but a bundler drops
+    a stylesheet imported by a module it treats as side-effect-free, so the
+    game names it. */
+@import "@spawnite/ui/styles.css";
+
+/*  Game fills its parent, so the page's root takes the whole screen. */
+#root {
+    height: 100dvh;
+}
+
+/*  A game restyles the house palette by overriding its tokens, listed in
+    ui's stylesheet, on :root. Not in @theme: this file is not a Tailwind
+    root, so an @theme here reaches the browser unread. The health fill is
+    sky blue. */
+:root {
+    --color-health-fill: oklch(74.6% 0.16 232.661);
+    color-scheme: dark;
+}
+
+/*  The HUD scales with the screen. Every size the house writes is in rems,
+    so the root's font size sets them all, from the screen's short side: a
+    phone's 390 pixels give 13, a 1080p screen 16 as ever, 1440p about 18.5,
+    and nothing grows past 20. */
+html {
+    font-size: clamp(13px, calc(8.4px + 0.7vmin), 20px);
+}
+
+/*  Dark mode: the house glass, which every Panel, Button, Tap and Modal is
+    made of, turned from frosted white to smoked dark glass through ui's
+    pane tokens; the game's own sheets and paw are made of the same. */
+:root {
+    --color-pane-surface: rgb(14 16 24 / 0.78);
+    --color-pane-sheen: rgb(255 255 255 / 0.08);
+    --color-pane-sheen-end: rgb(255 255 255 / 0);
+    --color-pane-edge: rgb(255 255 255 / 0.16);
+}
+
+/*  Below High graphics, the glass keeps its smoked colour but not its
+    blur: a blur behind a pane redraws what the game drew there every
+    frame, which a phone feels. Set by the graphics rig in src/view. */
+html:not([data-detail="high"]) {
+    --blur-pane: 0px;
+    --color-pane-surface: rgb(14 16 24 / 0.88);
+}
+html:not([data-detail="high"]) .backdrop-blur-lg,
+html:not([data-detail="high"]) .backdrop-blur-md {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+/*  A game, not a page: a finger held to keep attacking is a long press,
+    which would select the page's text and open the phone's copy menu, and
+    a tap would flash grey. The sliders and fields keep their own. */
+html,
+body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+}
+input,
+textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
+}

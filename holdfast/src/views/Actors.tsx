@@ -1,31 +1,34 @@
 import type { Entity } from "koota";
 import { Not } from "koota";
 import { useQuery } from "koota/react";
-import { Suspense, type ReactNode } from "react";
+import { memo, Suspense, type ReactNode } from "react";
 import {
-    Hero,
-    NetworkId,
-    ScenePath,
-    Transform,
+    HeroTrait,
+    NetworkIdTrait,
+    ScenePathTrait,
+    TransformTrait,
     useEntityRef,
 } from "@spawnite/engine";
 import {
     BoltTrait,
     BurstTrait,
-    CoinTrait,
     MonsterTrait,
+    SteamTrait,
 } from "../siege/traits";
 import { BoltView } from "./BoltView";
 import { BurstView } from "./BurstView";
-import { CoinView } from "./CoinView";
+import { CoinField } from "./CoinView";
 import { DownedMarker } from "./DownedMarker";
 import { EffectPools } from "./effects/EffectPools";
+import { StrikeView } from "./effects/StrikeView";
 import { MonsterView } from "./monsters/MonsterView";
+import { SteamView } from "./SteamView";
 import { WardenView } from "./WardenView";
 
 //  Everything the room's stream spawns that the scene does not draw: the
-//  wardens, the monsters, the bolts, the coins and the bursts, each
-//  as this game draws it, and the pools their effects draw from. The
+//  wardens, the monsters, the bolts, the bursts and the steam clouds, each
+//  as this game draws it, the pools their effects draw from, and the
+//  elements' strikes and the coins the room sends as events. The
 //  engine's Replicas draws every hero as its placeholder capsule, so the
 //  game draws them all itself, placed as Replicas places them.
 
@@ -43,9 +46,11 @@ function Placed({ entity, children }: PlacedProps) {
 }
 
 //  What an entity is, read once: the stream writes a new entity's traits in
-//  the delta that spawns it, before React draws.
-function Actor({ entity }: ActorProps) {
-    if (entity.has(Hero))
+//  the delta that spawns it, before React draws. Memoized, because the
+//  query draws the list again on every spawn and destroy, and each actor
+//  would draw its whole tree again with it.
+const Actor = memo(function Actor({ entity }: ActorProps) {
+    if (entity.has(HeroTrait))
         return (
             <WardenView entity={entity}>
                 <DownedMarker entity={entity} />
@@ -58,27 +63,33 @@ function Actor({ entity }: ActorProps) {
                 <BoltView entity={entity} />
             </Placed>
         );
-    if (entity.has(CoinTrait))
-        return (
-            <Placed entity={entity}>
-                <CoinView entity={entity} />
-            </Placed>
-        );
     if (entity.has(BurstTrait))
         return (
             <Placed entity={entity}>
                 <BurstView entity={entity} />
             </Placed>
         );
+    if (entity.has(SteamTrait))
+        return (
+            <Placed entity={entity}>
+                <SteamView entity={entity} />
+            </Placed>
+        );
     return null;
-}
+});
 
 export function Actors() {
-    const entities = useQuery(NetworkId, Transform, Not(ScenePath));
+    const entities = useQuery(
+        NetworkIdTrait,
+        TransformTrait,
+        Not(ScenePathTrait),
+    );
     return (
         //  Its own boundary, so a view that suspends hides none of the rest.
         <Suspense fallback={null}>
             <EffectPools />
+            <StrikeView />
+            <CoinField />
             {entities.map((entity) => (
                 <Actor key={entity} entity={entity} />
             ))}

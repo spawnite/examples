@@ -1,19 +1,23 @@
-import { Suspense, useMemo, useRef } from "react";
-import { useGLTF } from "@react-three/drei";
+import { Suspense, useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Mesh, type Group } from "three";
+import { useWorld } from "koota/react";
+import type { Group } from "three";
 import {
     Entity,
-    extendGltfLoader,
     RunContext,
     Stats,
     TrackMover,
     useBehaviour,
     useEntity,
+    useHeadless,
     type Track,
 } from "@spawnite/engine";
-import penguin from "@game/assets/models/sled/penguin.glb?url";
-import { readRiderVisible, RunBehaviour, RunTrait } from "../ride/course";
+import {
+    PaceBehaviour,
+    readRiderVisible,
+    RunBehaviour,
+    RunMachine,
+} from "../ride/course";
 import { LeanBehaviour, LeanTrait } from "../ride/lean";
 import {
     rideGravity,
@@ -21,11 +25,13 @@ import {
     riderStats,
     spawnDistance,
 } from "../ride/rider";
+import { RigBehaviour } from "../ride/rig";
+import { riderScale } from "../ride/riders";
 import { pullMaximum, SlingBehaviour, SlingTrait } from "../ride/sling";
+import { setSpeedStep } from "../ride/speed";
+import { readProgress } from "../shop";
 import { CoinChime } from "./CoinChime";
-
-/** The rider is drawn larger than its place on the track. */
-const riderScale = 1.4;
+import { RiderModel, type RiderPick } from "./RiderModel";
 
 function Sling({ aimSpan }: { aimSpan: number }) {
     useBehaviour(SlingBehaviour, { aimSpan });
@@ -37,16 +43,33 @@ function Lean() {
     return null;
 }
 
-function Run() {
-    useBehaviour(RunBehaviour, {});
+function Rig() {
+    useBehaviour(RigBehaviour, {});
     return null;
 }
 
-/** The penguin, drawn back by the sling's pull, rolled into the steer and
- *  blinking while stunned. All drawn only: the mover places the entity. */
-function RiderLook() {
+/** The Speed step bought, laid on the stats the `Stats` before it
+ *  declared, which keep it when they change. */
+function Speed({ step }: { step: number }) {
+    const entity = useEntity();
+    useEffect(() => setSpeedStep(entity, step), [entity, step]);
+    return null;
+}
+
+function Run() {
+    useBehaviour(RunBehaviour, {});
+    useBehaviour(PaceBehaviour, {});
+    return null;
+}
+
+/** The rider on its ride, drawn back by the sling's pull, rolled into the
+ *  steer, posed by the rig and blinking while stunned. All drawn only: the
+ *  mover places the entity. */
+function RiderLook({ rider, ride }: RiderPick) {
     const entity = useEntity();
     const lookRef = useRef<Group>(null);
+    //  Headless there is no page to draw it on, so no model loads.
+    const headless = useHeadless();
     useFrame(() => {
         const look = lookRef.current;
         if (!look) return;
@@ -54,49 +77,27 @@ function RiderLook() {
         //  and a roll to the right is a negative turn about z.
         look.position.z = (entity.get(SlingTrait)?.charge ?? 0) * pullMaximum;
         look.rotation.z = -(entity.get(LeanTrait)?.roll ?? 0);
-        look.visible = readRiderVisible(entity.get(RunTrait)?.stunSeconds ?? 0);
+        look.visible = readRiderVisible(
+            RunMachine.read(entity).secondsLeft ?? 0,
+        );
     });
     return (
         <group ref={lookRef}>
             <Suspense fallback={null}>
-                {/*  The model faces positive x, so it turns a quarter to
-                     face down the track with its entity. */}
+                {/*  The rider is built facing positive z, so it turns about
+                     to face down the track with its entity. */}
                 <group
                     position-y={-rideHeight}
-                    rotation-y={Math.PI / 2}
+                    rotation-y={Math.PI}
                     scale={riderScale}
                 >
-                    <Penguin />
+                    {!headless && (
+                        <RiderModel entity={entity} rider={rider} ride={ride} />
+                    )}
                 </group>
             </Suspense>
         </group>
     );
-}
-
-/** The penguin's body as a plain mesh. Its rig plays no clip and rests in
- *  its bind pose, so it draws the same without it, and three uploads no
- *  bones for it each frame. */
-export function Penguin() {
-    const { scene } = useGLTF(penguin, false, undefined, extendGltfLoader);
-    const bodies = useMemo(() => {
-        const found: Mesh[] = [];
-        scene.traverse((object) => {
-            if (object instanceof Mesh) found.push(object);
-        });
-        return found;
-    }, [scene]);
-    return bodies.map((body) => (
-        <mesh
-            key={body.uuid}
-            geometry={body.geometry}
-            material={body.material}
-            position={body.position}
-            quaternion={body.quaternion}
-            scale={body.scale}
-            castShadow
-            receiveShadow
-        />
-    ));
 }
 
 interface RiderProps {
@@ -106,8 +107,11 @@ interface RiderProps {
 }
 
 /** The player on the sled: held at the start line on the sling until it
- *  fires, then riding the track under the player's steer and jump. */
+ *  fires, then riding the track under the player's steer and jump, on the
+ *  animal, the ride and the Speed step the save holds. */
 export function Rider({ track, aimSpan }: RiderProps) {
+    //  Read as the run mounts: the lobby changes it between runs only.
+    const { rider, ride, step } = readProgress(useWorld());
     return (
         <Entity name="Rider" authority={RunContext.Client}>
             <TrackMover
@@ -118,10 +122,12 @@ export function Rider({ track, aimSpan }: RiderProps) {
                 rideHeight={rideHeight}
             />
             <Stats {...riderStats} />
+            <Speed step={step} />
             <Sling aimSpan={aimSpan} />
             <Lean />
+            <Rig />
             <Run />
-            <RiderLook />
+            <RiderLook rider={rider} ride={ride} />
             <CoinChime />
         </Entity>
     );

@@ -1,0 +1,11 @@
+/*  The house look. The engine re-exports the primitives, but a bundler drops
+    a stylesheet imported by a module it treats as side-effect-free, so the
+    game names it. */
+@import "@spawnite/ui/styles.css";
+@import "@spawnite/ui/themes/slate.css";
+@import "./hud/depthfield.css";
+
+/*  Game fills its parent, so the page's root takes the whole screen. */
+#root {
+    height: 100dvh;
+}

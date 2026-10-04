@@ -1,0 +1,1668 @@
+/*  Depthfield's own look, copied from the source game's stylesheet: the
+    run's bars and counters, the hotbar, the cards and their rarities, the
+    board, the death screen and the CRT glass over the field. Every class
+    carries a df- prefix, so none meets a Tailwind utility of the same name.
+    The dialogs themselves are the engine's Modal, with this content in its
+    pane. */
+
+.df-text {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #e8edf1;
+}
+
+.df-button {
+    cursor: pointer;
+    color: #d6dfe5;
+    background: #202830;
+    border: 1px solid #39444e;
+    border-radius: 6px;
+    padding: 9px 15px;
+    font: inherit;
+    font-size: 14px;
+}
+.df-button:hover {
+    background: #303c45;
+    border-color: #a9ed85;
+}
+.df-button:focus-visible {
+    outline: 2px solid #a9ed85;
+    outline-offset: 3px;
+}
+.df-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/*  The run's readout over the field. */
+.df-hud {
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #101820c4;
+    border: 1px solid #3d4c55;
+    border-radius: 10px;
+}
+/* The phone's clock and level, in place of the run's panel. */
+.df-chip {
+    pointer-events: none;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 4px 10px;
+    background: #101820c4;
+    border: 1px solid #3d4c55;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+}
+.df-hudtop {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+}
+/*  The live numbers along the card's foot: an icon, then the number in
+    bold, spaced apart rather than divided. */
+.df-hudfoot {
+    display: flex;
+    gap: 16px;
+    padding-top: 7px;
+    border-top: 1px solid #2c3a44;
+    color: #8897a3;
+}
+@media (max-width: 639px) {
+    .df-hudfoot {
+        display: none;
+    }
+}
+.df-who {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 4px;
+}
+.df-who b {
+    font-size: 15px;
+    letter-spacing: 0.3px;
+}
+.df-who span {
+    font-size: 11px;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+}
+.df-health {
+    display: inline-block;
+    width: 130px;
+    height: 7px;
+    background: #35404b;
+    border-radius: 9px;
+    margin-right: 10px;
+    vertical-align: middle;
+    overflow: hidden;
+}
+.df-health i,
+.df-xp i {
+    display: block;
+    background: #b4ee94;
+    height: 100%;
+    transition: width 0.1s linear;
+}
+.df-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    color: #92a2ae;
+    margin-bottom: 5px;
+}
+.df-runstats {
+    display: flex;
+    gap: 28px;
+}
+.df-runstats b {
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+}
+.df-runstats small {
+    font-size: 13px;
+    color: #72838f;
+}
+.df-xp {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 4px;
+    background: #293a39;
+    pointer-events: none;
+}
+.df-xp i {
+    background: #70bcaf;
+}
+@media (max-width: 760px) {
+    .df-hud {
+        padding: 8px 10px;
+    }
+    .df-hudtop {
+        gap: 10px;
+    }
+    .df-hudfoot {
+        gap: 10px;
+    }
+    .df-health {
+        width: 64px;
+    }
+    .df-runstats {
+        gap: 12px;
+    }
+    .df-runstats b {
+        font-size: 17px;
+    }
+    .df-runstats small {
+        display: none;
+    }
+    .df-label {
+        font-size: 9px;
+    }
+}
+
+.df-toast {
+    color: #c9edb8;
+    font-size: 14px;
+    pointer-events: none;
+    text-align: center;
+    text-shadow: 0 1px 2px #000;
+}
+
+.df-hotbar {
+    display: flex;
+    gap: 8px;
+    pointer-events: none;
+}
+.df-hotbar i {
+    position: relative;
+    overflow: hidden;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    border: 1px solid #4a5964;
+    background: #182028ee;
+    font-style: normal;
+    font-size: 18px;
+    color: #d7e2ea;
+}
+.df-hotbar i small {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 9px;
+    color: #b4ee94;
+}
+.df-hotbar i b {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #08101888;
+}
+.df-hotbar i.df-empty {
+    border-style: dashed;
+    background: #12181ecc;
+}
+.df-hotbar i.df-dash {
+    margin-left: 10px;
+    color: #e7fff0;
+    border-color: #6d8f78;
+}
+.df-hotbar i.df-dash b {
+    background: #081018aa;
+}
+
+/*  Each weapon's colour, on the hotbar, the loadout and the cards. */
+.df-pulse {
+    color: #b4ee94;
+}
+.df-laser {
+    color: #80ddff;
+}
+.df-boomerang {
+    color: #ffc589;
+}
+.df-shard {
+    color: #d7c4ff;
+}
+.df-nova {
+    color: #9ad7ff;
+}
+.df-mine {
+    color: #ffd0ea;
+}
+.df-zap {
+    color: #9af6ff;
+}
+.df-all {
+    color: #fff1bd;
+    letter-spacing: 0.5px;
+}
+
+/*  Each class's colour. */
+.df-soldier {
+    color: #d5dde3;
+}
+.df-prophet {
+    color: #ffe08a;
+}
+.df-vanguard {
+    color: #ffb085;
+}
+.df-skirmisher {
+    color: #b4ee94;
+}
+.df-sentinel {
+    color: #8fd4ff;
+}
+.df-artillerist {
+    color: #d2b4ff;
+}
+
+.df-minimap {
+    pointer-events: none;
+    border: 1px solid #3d4c55;
+    border-radius: 4px;
+}
+
+/*  The glass over the field: scanlines, a phosphor shimmer and a vignette. */
+.df-crt {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        repeating-linear-gradient(0deg, #00000022 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(
+            90deg,
+            #ff404006 0 1px,
+            #40ff4006 1px 2px,
+            #4040ff06 2px 3px
+        ),
+        radial-gradient(
+            ellipse at 50% 45%,
+            transparent 48%,
+            #03081035 78%,
+            #000b 100%
+        );
+    box-shadow:
+        inset 0 0 42px #0009,
+        inset 0 3px 10px #c3efff25;
+    animation: df-crt-flicker 10s infinite;
+}
+@keyframes df-crt-flicker {
+    0%,
+    16%,
+    17%,
+    48%,
+    49%,
+    81%,
+    82%,
+    100% {
+        opacity: 1;
+    }
+    16.35% {
+        opacity: 0.86;
+    }
+    48.25% {
+        opacity: 0.92;
+    }
+    81.2% {
+        opacity: 0.78;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .df-crt {
+        animation: none;
+    }
+}
+
+/*  Inside a dialog. */
+.df-pane {
+    width: min(560px, calc(100vw - 48px));
+    max-width: 100%;
+    text-align: left;
+    font-size: 14px;
+    color: #c5d0d8;
+}
+.df-pane p {
+    color: #a4b6c1;
+    line-height: 1.6;
+    margin: 6px 0;
+}
+.df-keys {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 4px 0 12px;
+    color: #9aaab4;
+    font-size: 12px;
+    line-height: 1.9;
+}
+.df-keys span {
+    white-space: nowrap;
+}
+.df-kbd {
+    font: 11px monospace;
+    color: #c5d0d8;
+    padding: 3px 5px;
+    background: #27323a;
+    border: 1px solid #3e4a53;
+    border-radius: 3px;
+    margin: 0 2px;
+}
+/*  The level-up deal: four tall cards over the dimmed field, the level and
+    the choice above them, the rerolls below. Each card's frame takes its
+    rarity's colour, --df-tier, and a glow that grows with the tier.
+    Prismatic turns its frame through every hue. */
+.df-deal {
+    /*  A card's width and least height on a desktop. */
+    --df-card-width: 208px;
+    --df-card-height: 318px;
+    /*  How far a card under the pointer or focus rises. */
+    --df-card-lift: 8px;
+    /*  A card grows in from its foot, each this long after the one before. */
+    --df-deal-time: 0.42s;
+    --df-deal-stagger: 70ms;
+    --df-deal-rise: 48px;
+    min-width: 0;
+    gap: 18px;
+    /*  Room inside the pane, which scrolls on a short screen and so clips,
+        for the glow, the shadow and the lift. */
+    padding: 30px 32px 26px;
+}
+.df-deal:focus-visible {
+    outline: none;
+}
+.df-deal-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: #b4ee94;
+}
+.df-deal-head::before,
+.df-deal-head::after {
+    content: "";
+    width: 56px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, currentColor);
+}
+.df-deal-head::after {
+    background: linear-gradient(270deg, transparent, currentColor);
+}
+.df-deal-utility {
+    color: #8fd4ff;
+}
+.df-deal-loadout {
+    color: #ffe08a;
+}
+.df-cards {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, var(--df-card-width));
+    gap: 16px;
+}
+
+.df-upcard {
+    --df-tier: #8d9ba6;
+    --df-tier-ink: #c9d3da;
+    --df-tier-glow: 0 0 0 transparent;
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: var(--df-card-height);
+    padding: 0;
+    align-items: stretch;
+    overflow: hidden;
+    color: #e8edf1;
+    border: 1.5px solid color-mix(in srgb, var(--df-tier) 75%, transparent);
+    border-radius: 14px;
+    background:
+        radial-gradient(
+            130% 55% at 50% 0%,
+            color-mix(in srgb, var(--df-tier) 24%, transparent),
+            transparent 72%
+        ),
+        linear-gradient(180deg, #111d2a, #0a121b);
+    box-shadow:
+        var(--df-tier-glow),
+        0 14px 28px #0009;
+    transform-origin: 50% 100%;
+    animation: df-deal var(--df-deal-time) cubic-bezier(0.2, 0.9, 0.3, 1.2)
+        backwards;
+    animation-delay: calc(var(--df-deal-index) * var(--df-deal-stagger));
+    transition:
+        translate 0.16s ease-out,
+        border-color 0.16s;
+}
+.df-upcard:hover,
+.df-upcard:focus-visible {
+    translate: 0 calc(-1 * var(--df-card-lift));
+    border-color: var(--df-tier-ink);
+}
+.df-upcard:focus-visible {
+    outline: 2px solid var(--df-tier-ink);
+    outline-offset: 3px;
+}
+.df-upcard > span {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 16px 14px;
+    text-align: center;
+}
+@keyframes df-deal {
+    from {
+        scale: 0.3;
+        translate: 0 var(--df-deal-rise);
+    }
+    70% {
+        scale: 1.03;
+        translate: 0 -3px;
+    }
+    to {
+        scale: 1;
+        translate: 0 0;
+    }
+}
+
+.df-upcard-tier {
+    align-self: stretch;
+    margin: 0 -16px;
+    padding: 8px 0 7px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--df-tier-ink);
+    background: color-mix(in srgb, var(--df-tier) 16%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--df-tier) 34%, transparent);
+}
+.df-upcard-icon {
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    margin: 20px 0 12px;
+    font-size: 40px;
+    line-height: 1;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        color-mix(in srgb, currentColor 20%, transparent),
+        transparent 70%
+    );
+    box-shadow: inset 0 0 0 1px
+        color-mix(in srgb, currentColor 30%, transparent);
+    filter: drop-shadow(
+        0 0 10px color-mix(in srgb, currentColor 55%, transparent)
+    );
+}
+.df-upcard-source {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+.df-upcard-name {
+    margin-top: 2px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #f4f7fa;
+}
+.df-upcard-name::after {
+    content: "";
+    display: block;
+    width: 64px;
+    height: 1px;
+    margin: 12px auto 10px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        color-mix(in srgb, var(--df-tier) 80%, transparent),
+        transparent
+    );
+}
+.df-upcard-amount {
+    font:
+        italic 900 38px/1 Arial,
+        Helvetica,
+        sans-serif;
+    letter-spacing: -1px;
+    white-space: nowrap;
+    color: var(--df-tier-amount, #ffffff);
+}
+.df-upcard-label {
+    margin-top: 5px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #a9bac5;
+}
+.df-upcard-level {
+    margin-top: 10px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #d5dfe6;
+    background: #ffffff0d;
+    border: 1px solid #ffffff1a;
+    border-radius: 999px;
+}
+.df-upcard-key {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    margin-top: auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: #c5d0d8;
+    background: #ffffff0a;
+    border: 1px solid #ffffff2e;
+    border-bottom-width: 2px;
+    border-radius: 6px;
+}
+/*  The key keeps clear of the gain above it on the shortest card. */
+.df-upcard > span > :nth-last-child(2) {
+    margin-bottom: 14px;
+}
+
+.df-tier-rare {
+    --df-tier: #509eff;
+    --df-tier-ink: #9ccaff;
+    --df-tier-amount: #cfe5ff;
+    --df-tier-glow: 0 0 20px #509eff59;
+}
+.df-tier-epic {
+    --df-tier: #b77aff;
+    --df-tier-ink: #dcbcff;
+    --df-tier-amount: #ecdcff;
+    --df-tier-glow: 0 0 28px #b77aff73;
+}
+.df-tier-legendary {
+    --df-tier: #ffb13c;
+    --df-tier-ink: #ffe3a3;
+    --df-tier-amount: #fff0c8;
+    --df-tier-glow: 0 0 38px #ffa43a8c;
+}
+.df-upcard.df-tier-legendary {
+    animation:
+        df-deal var(--df-deal-time) cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards,
+        df-legendary-glow 1.8s ease-in-out infinite alternate;
+    animation-delay: calc(var(--df-deal-index) * var(--df-deal-stagger)), 0s;
+}
+@keyframes df-legendary-glow {
+    to {
+        box-shadow:
+            0 0 52px #ffa43ab3,
+            0 14px 28px #0009;
+    }
+}
+/*  Prismatic: the frame is a conic gradient behind the card's fill, turned
+    by an animated angle. */
+@property --df-prism-turn {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+.df-tier-prismatic {
+    --df-tier: #b9a6ff;
+    --df-tier-ink: #e7fbff;
+    --df-tier-amount: #ffffff;
+    --df-tier-glow: 0 0 30px #ff96cf59, 0 0 46px #8dfff240;
+}
+.df-upcard.df-tier-prismatic {
+    border: 2px solid transparent;
+    background:
+        radial-gradient(130% 55% at 50% 0%, #b9a6ff40, transparent 72%)
+            padding-box,
+        linear-gradient(180deg, #171d33, #0c1220) padding-box,
+        conic-gradient(
+                from var(--df-prism-turn),
+                #ff96cf,
+                #fff3a1,
+                #8dfff2,
+                #b9a6ff,
+                #ff96cf
+            )
+            border-box;
+    animation:
+        df-deal var(--df-deal-time) cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards,
+        df-prism-turn 3s linear infinite;
+    animation-delay: calc(var(--df-deal-index) * var(--df-deal-stagger)), 0s;
+}
+.df-tier-prismatic .df-upcard-tier,
+.df-tier-prismatic .df-upcard-amount {
+    animation: df-prism-text 5s linear infinite;
+}
+@keyframes df-prism-turn {
+    to {
+        --df-prism-turn: 360deg;
+    }
+}
+
+/*  The rerolls under the cards, each with its count. */
+.df-rerollbar {
+    gap: 12px;
+}
+.df-btn.df-reroll {
+    padding: 9px 14px 9px 16px;
+    font-size: 15px;
+    font-weight: 700;
+}
+.df-reroll > span {
+    align-items: center;
+    gap: 8px;
+}
+.df-reroll-count {
+    min-width: 22px;
+    padding: 1px 7px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    color: #e8edf1;
+    background: #ffffff14;
+    border-radius: 999px;
+}
+.df-btn.df-reroll-plus {
+    color: #ffe3a3;
+    background: #3a2c16;
+    border-color: #d6b15a;
+}
+.df-btn.df-reroll-plus:hover {
+    background: #4a3a1c;
+    border-color: #ffe3a3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .df-upcard,
+    .df-upcard.df-tier-legendary,
+    .df-upcard.df-tier-prismatic,
+    .df-tier-prismatic .df-upcard-tier,
+    .df-tier-prismatic .df-upcard-amount {
+        animation: none;
+    }
+    .df-upcard {
+        transition: none;
+    }
+}
+
+/*  A short window, as a laptop's or a landscape tablet's: a smaller icon
+    and less room above it, so the deal fits without a scroll. */
+@media (max-height: 620px) {
+    .df-deal {
+        padding-top: 18px;
+    }
+    .df-upcard-icon {
+        width: 60px;
+        height: 60px;
+        margin: 12px 0 8px;
+        font-size: 32px;
+    }
+}
+
+/*  A phone, as usePhoneLayout reads one: the cards two by two, smaller,
+    with no key badges on a touch screen. */
+@media (pointer: coarse), (max-width: 639px) {
+    .df-deal {
+        --df-card-height: 0px;
+        --df-card-lift: 4px;
+        width: 100%;
+        gap: 10px;
+        padding: 10px 14px 12px;
+    }
+    .df-deal-head {
+        font-size: 12px;
+        letter-spacing: 3px;
+    }
+    .df-deal-head::before,
+    .df-deal-head::after {
+        width: 28px;
+    }
+    .df-cards {
+        width: 100%;
+        grid-auto-flow: row;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .df-upcard > span {
+        padding: 0 10px 12px;
+    }
+    .df-upcard-tier {
+        margin: 0 -10px;
+        padding: 6px 0 5px;
+        font-size: 10px;
+        letter-spacing: 2px;
+    }
+    .df-upcard-icon {
+        width: 44px;
+        height: 44px;
+        margin: 10px 0 6px;
+        font-size: 24px;
+    }
+    .df-upcard-name {
+        font-size: 15px;
+    }
+    .df-upcard-name::after {
+        margin: 6px auto 5px;
+    }
+    .df-upcard-amount {
+        font-size: 27px;
+    }
+    .df-upcard-label {
+        font-size: 12px;
+    }
+    .df-upcard-level {
+        margin-top: 8px;
+        font-size: 11px;
+    }
+}
+@media (pointer: coarse) {
+    .df-upcard-key {
+        display: none;
+    }
+    .df-upcard > span > :nth-last-child(2) {
+        margin-bottom: 0;
+    }
+}
+
+/*  The end of a run. */
+.df-statgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 18px;
+    margin: 8px 0 4px;
+    font-size: 13px;
+    color: #c5d0d8;
+}
+.df-statgrid b {
+    float: right;
+    color: #fff;
+}
+.df-subhead {
+    margin: 12px 0 8px;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: #9ad7ff;
+}
+.df-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 0 12px;
+}
+.df-barline {
+    display: grid;
+    grid-template-columns: 92px 1fr 52px;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+}
+.df-barline i {
+    display: block;
+    justify-self: start;
+    height: 12px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #7af7ff, #ff4fd8);
+    box-shadow: 0 0 10px #ff4fd855;
+}
+.df-boardhead,
+.df-board li {
+    display: grid;
+    grid-template-columns: 22px 42px minmax(72px, 1fr) auto auto 48px auto;
+    gap: 8px;
+    align-items: center;
+}
+.df-boardhead {
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #8ea0ab;
+    padding-bottom: 4px;
+}
+.df-board {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+}
+.df-board li {
+    padding: 5px 0;
+    border-bottom: 1px solid #2c3a44;
+    font-size: 13px;
+}
+.df-board b,
+.df-board i {
+    color: #8ea0ab;
+    font-style: normal;
+}
+.df-board em {
+    color: #8fd4ff;
+    font-style: normal;
+    font-size: 11px;
+}
+.df-board strong {
+    min-width: 52px;
+    text-align: right;
+}
+.df-board li.df-you span,
+.df-board li.df-you strong {
+    color: #ffe08a;
+}
+.df-boardempty {
+    margin: 6px 0 10px;
+    color: #c5d0d8;
+    font-size: 13px;
+}
+.df-youdied {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.df-youdied h1 {
+    margin: 0 0 28px;
+    color: #d10f0f;
+    font-size: clamp(52px, 9vw, 96px);
+    letter-spacing: 0.14em;
+    font-weight: 700;
+    text-shadow: 0 0 22px #ff1a1a77;
+}
+
+/*  The field notes. */
+.df-notes {
+    width: min(360px, calc(100vw - 28px));
+    max-height: calc(100dvh - 120px);
+    overflow: auto;
+    background: #101820f6;
+    border: 1px solid #3d4c55;
+    border-radius: 12px;
+    padding: 16px 16px 22px;
+    box-shadow: 0 18px 48px #000c;
+    font-size: 13px;
+}
+.df-sectiontitle {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 1.6px;
+    display: flex;
+    justify-content: space-between;
+}
+.df-weapon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+}
+.df-weaponicon {
+    flex-shrink: 0;
+    border: 1px solid #55715b;
+    background: #293c31;
+    font-size: 23px;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+}
+.df-weapon small {
+    display: block;
+    color: #8497a3;
+    font-size: 12px;
+    margin-top: 4px;
+}
+.df-weaponlevel {
+    margin-left: auto;
+    color: #b4ee94;
+    font-size: 11px;
+    white-space: nowrap;
+}
+.df-stats {
+    font-size: 12px;
+    color: #8fa1ae;
+    margin: 14px 0;
+}
+.df-stats > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+}
+.df-stats b {
+    color: #d4e0e6;
+    font-weight: normal;
+}
+.df-raritykey {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 11px;
+    line-height: 1.8;
+}
+.df-note {
+    border-top: 1px solid #303a43;
+    margin-top: 18px;
+    padding-top: 16px;
+    color: #8fa1ab;
+    line-height: 1.6;
+}
+.df-note p {
+    margin: 8px 0;
+}
+.df-control {
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #303a43;
+}
+.df-control label {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+.df-control output {
+    color: #b4ee94;
+}
+.df-control input {
+    width: 100%;
+    accent-color: #b4ee94;
+    margin: 12px 0 4px;
+}
+
+@keyframes df-toast {
+    0%,
+    85% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/*  The fall: the field reddens, then goes black, over the 1.8 seconds the
+    hero takes to fall. */
+.df-dying {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    animation: df-dying 1.8s linear forwards;
+}
+@keyframes df-dying {
+    0% {
+        background: rgba(90, 0, 0, 0);
+    }
+    25% {
+        background: rgba(90, 0, 0, 0.3);
+    }
+    100% {
+        background: rgba(0, 0, 0, 1);
+    }
+}
+
+/*  Each look's colour, for the name and the look's swatch. */
+.df-look-grove {
+    color: #b4ee94;
+    --df-swatch: #b4ee94;
+}
+.df-look-ember {
+    color: #ffb085;
+    --df-swatch: #ffb085;
+}
+.df-look-tide {
+    color: #8fd4ff;
+    --df-swatch: #8fd4ff;
+}
+.df-look-violet {
+    color: #d2b4ff;
+    --df-swatch: #d2b4ff;
+}
+.df-look-gilt {
+    color: #ffe08a;
+    --df-swatch: #ffe08a;
+}
+.df-look-prismatic {
+    --df-swatch: conic-gradient(#ff96cf, #fff3a1, #8dfff2, #b9a6ff, #ff96cf);
+    animation: df-prism-text 5s linear infinite;
+}
+@keyframes df-prism-text {
+    0% {
+        color: #ff96cf;
+    }
+    25% {
+        color: #fff3a1;
+    }
+    50% {
+        color: #8dfff2;
+    }
+    75% {
+        color: #b9a6ff;
+    }
+    100% {
+        color: #ff96cf;
+    }
+}
+.df-fill {
+    display: block;
+    height: 100%;
+}
+
+/*  The engine's Button in the source's plain look: a dark slab with a thin
+    border that turns green under the pointer. The primary is the Button's
+    Primary variant in the theme's accent. */
+.df-btn {
+    height: auto;
+    min-width: 0;
+    padding: 9px 15px;
+    color: #d6dfe5;
+    background: #202830;
+    border: 1px solid #39444e;
+    border-radius: 6px;
+    box-shadow: none;
+    font:
+        16px Arial,
+        Helvetica,
+        sans-serif;
+}
+/*  A small square button that holds one icon. */
+.df-btn.df-iconbtn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 7px;
+}
+.df-btn:hover {
+    background: #303c45;
+    border-color: #a9ed85;
+}
+
+.df-normal-text {
+    color: #91eaa7;
+}
+.df-rare-text {
+    color: #85bfff;
+}
+.df-epic-text {
+    color: #d4a8ff;
+}
+.df-legendary-text {
+    color: #ffc16a;
+}
+.df-prismatic-text {
+    color: #d7fbff;
+    text-shadow:
+        1px 0 #ff96cf,
+        -1px 0 #9adfff;
+}
+.df-weapon small {
+    display: block;
+}
+
+/*  The engine's Modal in the source's panel: a green overline over the
+    heading. The pane's own look is the Modal's className (hud/classes.ts);
+    these reach the heading the Modal draws, which takes no class. */
+dialog:has(.df-pane) > div:first-child > :not(h2, .df-pane) {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #b4ee94;
+}
+dialog:has(.df-pane) > div:first-child > h2 {
+    margin: 12px 0;
+    font-size: 27px;
+    font-weight: normal;
+}
+dialog:has(.df-victory)::backdrop {
+    background: #07060ee6;
+}
+.df-pane.df-wide {
+    width: min(580px, calc(100vw - 108px));
+}
+.df-pane.df-victory {
+    width: min(500px, calc(100vw - 108px));
+}
+
+/*  The source's grading over the field: a little more colour and
+    contrast. three marks its own canvas with data-engine, which leaves
+    the minimap and the preview as they are. */
+canvas[data-engine] {
+    filter: saturate(1.22) contrast(1.08);
+}
+
+/*  The lobby over the soldier on its stage. Its accent is the stage's
+    neon, --df-accent, which the screen sets from the stage picked, so the
+    picks, the bars and Play take the platform's colour. On a desktop the
+    picks stand in a column on the right, clear of the soldier; on a phone
+    they are a sheet along the bottom with Play last. */
+.df-lobby {
+    --df-panel: #08111cd9;
+    --df-edge: #ffffff1a;
+    --df-muted: #8fa1ae;
+    --df-ink: #061018;
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 384px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+        "head board"
+        "head side";
+    gap: 16px 24px;
+    padding: calc(20px + var(--game-inset-top, env(safe-area-inset-top, 0px)))
+        calc(24px + var(--game-inset-right, env(safe-area-inset-right, 0px)))
+        calc(22px + var(--game-inset-bottom, env(safe-area-inset-bottom, 0px)))
+        calc(28px + var(--game-inset-left, env(safe-area-inset-left, 0px)));
+    pointer-events: none;
+}
+.df-lobby :where(.df-classcard, .df-lobby-side, .df-lobby-keys) * {
+    text-shadow: none;
+}
+.df-lobby-head {
+    grid-area: head;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+}
+.df-wordmark {
+    margin: 0;
+    font:
+        italic 900 60px/0.9 Arial,
+        Helvetica,
+        sans-serif;
+    letter-spacing: 0.01em;
+    color: transparent;
+    background: linear-gradient(
+        100deg,
+        #ffffff 0%,
+        var(--df-accent) 55%,
+        var(--df-accent-deep) 100%
+    );
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(
+        0 0 22px color-mix(in srgb, var(--df-accent) 45%, transparent)
+    );
+}
+
+/*  The class rolled for the run, its stats as bars. */
+.df-classcard {
+    pointer-events: auto;
+    width: 280px;
+    padding: 12px 14px 14px;
+    background: var(--df-panel);
+    border: 1px solid var(--df-edge);
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+}
+.df-classcard-line {
+    margin: 0;
+    font-size: 12px;
+    color: var(--df-muted);
+}
+.df-classname {
+    display: block;
+    margin: 2px 0 10px;
+    font-size: 24px;
+    font-weight: 800;
+}
+.df-classstats {
+    display: grid;
+    gap: 7px;
+}
+.df-stat {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr) 40px;
+    white-space: nowrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--df-muted);
+}
+.df-stat b {
+    text-align: right;
+    color: #e8edf1;
+    font-weight: 700;
+}
+.df-statbar {
+    width: 100%;
+    height: 6px;
+}
+
+.df-lobby-board {
+    grid-area: board;
+    justify-self: end;
+    align-self: start;
+    height: 42px;
+    gap: 8px;
+    padding: 0 16px;
+    background: var(--df-panel);
+    border-color: var(--df-edge);
+    border-radius: 12px;
+}
+
+/*  The picks and Play. */
+.df-lobby-side {
+    grid-area: side;
+    align-self: end;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+}
+.df-lastrun {
+    pointer-events: auto;
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #d8e3ea;
+    background: var(--df-panel);
+    border: 1px solid var(--df-edge);
+    border-left: 3px solid var(--df-accent);
+    border-radius: 10px;
+}
+.df-picker {
+    pointer-events: auto;
+    padding: 10px;
+    background: var(--df-panel);
+    border: 1px solid var(--df-edge);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+.df-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: #ffffff08;
+    border-radius: 11px;
+}
+.df-tab {
+    flex: 1;
+    height: 36px;
+    min-width: 0;
+    padding: 0;
+    font:
+        600 14px Arial,
+        Helvetica,
+        sans-serif;
+    color: var(--df-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: none;
+}
+.df-tab:hover {
+    color: #e8edf1;
+}
+.df-tab.df-tab-on {
+    color: #ffffff;
+    background: #ffffff14;
+    box-shadow: inset 0 -2px 0 var(--df-accent);
+}
+/*  A tab's pane grows from the tabs as it opens. */
+.df-pickpane {
+    display: block;
+    min-height: 236px;
+    padding: 12px 4px 4px;
+    transform-origin: top center;
+    animation: df-grow 0.18s ease-out;
+}
+@keyframes df-grow {
+    from {
+        transform: scale(0.96);
+    }
+    to {
+        transform: scale(1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .df-pickpane {
+        animation: none;
+    }
+}
+
+/*  A pick: a tile that stacks its swatch or icon over its name, ringed in
+    the accent when picked. */
+.df-look,
+.df-weapon-pick,
+.df-stagecard {
+    height: auto;
+    min-width: 0;
+    padding: 10px 6px;
+    font:
+        600 13px Arial,
+        Helvetica,
+        sans-serif;
+    color: #dbe4ea;
+    background: #ffffff07;
+    border: 1px solid #ffffff12;
+    border-radius: 12px;
+    box-shadow: none;
+}
+.df-look:hover,
+.df-weapon-pick:hover,
+.df-stagecard:hover {
+    background: #ffffff10;
+    border-color: #ffffff30;
+}
+.df-look.df-picked,
+.df-weapon-pick.df-picked,
+.df-stagecard.df-picked {
+    background: color-mix(in srgb, var(--df-accent) 14%, transparent);
+    border-color: var(--df-accent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--df-accent) 30%, transparent);
+}
+.df-look > span,
+.df-weapon-pick > span {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.df-pickname {
+    white-space: nowrap;
+}
+.df-look small,
+.df-weapon-pick small {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--df-muted);
+}
+
+.df-lookgrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.df-bigswatch {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--df-swatch);
+    box-shadow:
+        inset 0 0 0 1px #0007,
+        0 0 0 3px #ffffff10;
+    color: #0b1220;
+}
+.df-look:disabled .df-bigswatch {
+    filter: grayscale(0.8) brightness(0.6);
+}
+
+.df-weapongrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+.df-weaponglyph {
+    display: grid;
+    place-items: center;
+    height: 28px;
+    font-size: 24px;
+    line-height: 1;
+}
+.df-pickline {
+    margin: 12px 4px 0;
+    font-size: 13px;
+    color: var(--df-muted);
+}
+
+.df-stagelist {
+    display: grid;
+    gap: 8px;
+}
+.df-stagecard {
+    padding: 8px;
+    text-align: left;
+}
+.df-stagecard > span {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 12px;
+}
+.df-stageband {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 50px;
+    border-radius: 8px;
+    color: #ffffffcc;
+    background:
+        linear-gradient(
+            to bottom,
+            transparent 52%,
+            var(--df-card-cross) 52% 55%,
+            transparent 55%
+        ),
+        repeating-linear-gradient(
+                90deg,
+                color-mix(in srgb, var(--df-card-line) 55%, transparent) 0 1px,
+                transparent 1px 9px
+            )
+            bottom / 100% 45% no-repeat,
+        linear-gradient(var(--df-card-sky), var(--df-card-floor));
+    box-shadow: inset 0 0 0 1px #ffffff1c;
+}
+.df-stagecard:disabled .df-stageband {
+    filter: grayscale(0.7) brightness(0.55);
+}
+.df-stagetext {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+.df-stagetext b {
+    font-size: 15px;
+}
+.df-stagetext small {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--df-muted);
+    white-space: normal;
+}
+
+/*  Play below the picks. */
+.df-playbar {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.df-play {
+    width: 100%;
+    height: 64px;
+    gap: 10px;
+    font:
+        italic 900 24px Arial,
+        Helvetica,
+        sans-serif;
+    letter-spacing: 0.04em;
+    color: var(--df-ink);
+    background: var(--df-accent);
+    border: 0;
+    border-radius: 14px;
+    box-shadow:
+        0 0 28px color-mix(in srgb, var(--df-accent) 45%, transparent),
+        inset 0 -3px 0 #0003;
+}
+.df-play:hover {
+    filter: brightness(1.08);
+}
+
+/*  A short window keeps Play in view and the soldier clear: the picks'
+    pane takes only what its tab needs, and the keys give way. */
+@media (max-height: 640px) {
+    .df-lobby-keys {
+        display: none;
+    }
+    .df-pickpane {
+        min-height: 0;
+    }
+    .df-play {
+        height: 54px;
+    }
+}
+.df-lobby-keys {
+    pointer-events: auto;
+    width: 280px;
+    padding: 10px 14px 2px;
+    background: var(--df-panel);
+    border: 1px solid var(--df-edge);
+    border-radius: 14px;
+}
+
+/*  A phone, as usePhoneLayout reads one: the soldier in the upper half,
+    the picks a sheet along the bottom, Play beside the name at its foot. */
+@media (pointer: coarse), (max-width: 639px) {
+    .df-lobby {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas:
+            "head board"
+            "side side";
+        gap: 10px;
+        padding: calc(
+                12px + var(--game-inset-top, env(safe-area-inset-top, 0px))
+            )
+            calc(
+                12px + var(--game-inset-right, env(safe-area-inset-right, 0px))
+            )
+            calc(
+                12px +
+                    var(--game-inset-bottom, env(safe-area-inset-bottom, 0px))
+            )
+            calc(12px + var(--game-inset-left, env(safe-area-inset-left, 0px)));
+    }
+    .df-lobby-head {
+        gap: 8px;
+    }
+    .df-wordmark {
+        font-size: 28px;
+    }
+    /*  The class in one strip under the name, its four stats side by
+        side, so the soldier below stays clear. */
+    .df-lobby-head {
+        align-items: stretch;
+    }
+    .df-classcard {
+        width: auto;
+        padding: 7px 8px 9px;
+        border-radius: 12px;
+    }
+    .df-classcard-line {
+        display: none;
+    }
+    .df-classname {
+        margin: 0 0 5px;
+        font-size: 15px;
+    }
+    .df-classstats {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .df-stat {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "label value"
+            "bar bar";
+        gap: 3px 4px;
+    }
+    .df-stat > span,
+    .df-stat > b {
+        font-size: 10px;
+        line-height: 1.2;
+    }
+    .df-stat > span {
+        grid-area: label;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .df-stat > b {
+        grid-area: value;
+    }
+    .df-statbar {
+        grid-area: bar;
+        height: 4px;
+    }
+    .df-lobby-board {
+        width: 42px;
+        padding: 0;
+    }
+    .df-lobby-side {
+        gap: 8px;
+    }
+    .df-lastrun {
+        font-size: 12px;
+        padding: 6px 10px;
+    }
+    .df-picker {
+        padding: 8px;
+    }
+    .df-pickpane {
+        min-height: 0;
+        height: 200px;
+        overflow-y: auto;
+        padding-top: 10px;
+    }
+    .df-look,
+    .df-weapon-pick {
+        padding: 7px 4px;
+        font-size: 12px;
+    }
+    /*  The picked weapon's line has no room under the sheet's tiles. */
+    .df-pickline {
+        display: none;
+    }
+    .df-bigswatch {
+        width: 32px;
+        height: 32px;
+    }
+    .df-stagelist {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .df-stagecard > span {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .df-stageband {
+        width: 100%;
+        height: 40px;
+    }
+    .df-stagetext b {
+        font-size: 13px;
+    }
+    .df-stagetext small {
+        font-size: 11px;
+    }
+    .df-play {
+        height: 56px;
+        font-size: 21px;
+    }
+}
+
+/*  A phone held on its side: the sheet keeps its tabs and Play in view,
+    and the class strip gives it the room. */
+@media (pointer: coarse) and (max-height: 480px) {
+    .df-classcard {
+        display: none;
+    }
+    .df-pickpane {
+        height: 120px;
+    }
+}

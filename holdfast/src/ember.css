@@ -1,0 +1,40 @@
+/*  Ember: Holdfast's own theme, the glass theme carried into its dusk.
+    The panes stay translucent but go dark under a warm tint, the ink and
+    the accent turn amber, and the loading screen, the bars, the sticks
+    and the menus follow. Set after the glass import, so each token here
+    wins over the theme's and the rest stay glass. Plain CSS, not @theme:
+    this file is not a Tailwind root. */
+:root {
+    --color-pane-surface: rgb(2 6 23 / 78%);
+    --color-pane-sheen: rgb(254 243 199 / 12%);
+    --color-pane-sheen-end: rgb(254 243 199 / 2%);
+    --color-pane-edge: rgb(253 230 138 / 35%);
+    --color-pane-ink: #fef3c7;
+    --color-pane-shadow: rgb(0 0 0 / 55%);
+    --radius-pane: 0.75rem;
+    --radius-control: 0.5rem;
+    --blur-pane: 12px;
+    --color-health-fill: #fcd34d;
+    --color-health-track: rgb(2 6 23 / 80%);
+    --color-health-loss: #fef3c7;
+    --color-loading-background: #020617;
+    --color-loading-label: #94a3b8;
+    --color-loading-indicator: #fef3c7;
+    --color-loading-bar: #fcd34d;
+    --color-loading-track: rgb(254 243 199 / 14%);
+    --color-loading-text: #fef3c7;
+    --color-stick-ring: rgb(254 243 199 / 70%);
+    --color-stick-knob: rgb(254 243 199 / 90%);
+    --color-danger: #f87171;
+    --color-menu-surface: rgb(2 6 23 / 88%);
+    --color-menu-raised: rgb(254 243 199 / 7%);
+    --color-menu-edge: rgb(253 230 138 / 20%);
+    --color-menu-muted: rgb(254 243 199 / 60%);
+    --color-menu-accent: #fcd34d;
+    --color-menu-accent-ink: #020617;
+    --color-reading-good: #6ee7b7;
+    --color-reading-warn: #fcd34d;
+    --color-reading-bad: #f87171;
+    --color-voice-speaking: #6ee7b7;
+    --color-voice-muted: #f87171;
+}

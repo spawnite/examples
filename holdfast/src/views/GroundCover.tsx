@@ -18,26 +18,35 @@ import {
     SRGBColorSpace,
     type Texture,
 } from "three";
-import { Ground, HeightfieldGeometry, useHeadless } from "@spawnite/engine";
-import { Grass } from "./ground/Grass";
+import {
+    GroundTrait,
+    type GroundSurface,
+    HeightfieldGeometry,
+    useHeadless,
+} from "@spawnite/engine";
 import {
     groundFunctions,
     groundLayers,
+    groundLayoutUniforms,
     groundVertexDeclarations,
     groundVertexOutputs,
 } from "./ground/groundShader";
 import { groundTextures } from "./ground/groundTextures";
-import { hearthMetres, ringMetres } from "./layout";
+import { Outland } from "./world/Outland";
 import { Surroundings } from "./world/Surroundings";
 
-//  The ground as this game paints it, laid over the engine's own: grass
-//  with blades standing in it, packed earth on the map's roads and wherever
+//  The ground as this game paints it, laid over the engine's own: grass,
+//  whose blades the engine grows as grassShader.ts shapes them, packed earth on the map's roads and wherever
 //  feet wear it, a cobbled ring and flagstones under the hearth, each from a
-//  photographed surface. The engine draws its ground as a grid, the look of
-//  a prototype; this draws the same heights with the game's own surface, a
-//  hair in front of it.
+//  photographed surface. The engine draws its ground flat, as
+//  src/maps/materials.json sets it, with no textures to load; this draws
+//  the same heights with the game's own surface, a hair in front of it.
 
-type GroundPaintSurface = ComponentProps<typeof HeightfieldGeometry>["surface"];
+//  The heights the geometry lays, and the paths the road weights read.
+type GroundPaintSurface = ComponentProps<
+    typeof HeightfieldGeometry
+>["surface"] &
+    Pick<GroundSurface, "getPathSurfaceAt">;
 
 //  Object.keys types every key as a string; these are the table's own.
 const layerNames = Object.keys(
@@ -65,8 +74,14 @@ function bakeRoadWeights(mesh: Mesh, surface: GroundPaintSurface) {
     mesh.geometry.setAttribute("roadWeight", new BufferAttribute(weights, 1));
 }
 
-/** The ground's material over the loaded maps, in textureUrls' order. */
-function createGroundMaterial(maps: Texture[], anisotropy: number) {
+/** The ground's material over the loaded maps, in textureUrls' order.
+ *  The land's reads no grass, since past the map it is all forest floor
+ *  and track. */
+function createGroundMaterial(
+    maps: Texture[],
+    anisotropy: number,
+    { land }: { land: boolean },
+) {
     const material = new MeshStandardMaterial({
         roughness: 0.92,
         metalness: 0,
@@ -94,12 +109,18 @@ function createGroundMaterial(maps: Texture[], anisotropy: number) {
             ];
         }),
     );
+    if (land) material.defines = { GROUND_LAND: "" };
     material.onBeforeCompile = (shader) => {
-        Object.assign(shader.uniforms, layerUniforms, {
-            uRing: { value: ringMetres.radius },
-            uRingHalfWidth: { value: ringMetres.halfWidth },
-            uHearth: { value: hearthMetres },
-        });
+        Object.assign(
+            shader.uniforms,
+            layerUniforms,
+            Object.fromEntries(
+                Object.entries(groundLayoutUniforms).map(([name, value]) => [
+                    name,
+                    { value },
+                ]),
+            ),
+        );
         shader.vertexShader = shader.vertexShader
             .replace(
                 "#include <common>",
@@ -141,34 +162,46 @@ function GroundPaint({ surface }: GroundPaintProps) {
         state.gl.capabilities.getMaxAnisotropy(),
     );
     const material = useMemo(
-        () => createGroundMaterial(maps, anisotropy),
+        () => createGroundMaterial(maps, anisotropy, { land: false }),
+        [maps, anisotropy],
+    );
+    const landMaterial = useMemo(
+        () => createGroundMaterial(maps, anisotropy, { land: true }),
         [maps, anisotropy],
     );
     const meshRef = useRef<Mesh>(null);
     useLayoutEffect(() => () => material.dispose(), [material]);
+    useLayoutEffect(() => () => landMaterial.dispose(), [landMaterial]);
     //  After the geometry's own layout effect, which lays its vertices.
     useLayoutEffect(() => {
         if (meshRef.current) bakeRoadWeights(meshRef.current, surface);
     }, [surface]);
 
     return (
-        <mesh
-            ref={meshRef}
-            name="ground cover"
-            rotation-x={-Math.PI / 2}
-            material={material}
-            receiveShadow
-            //  A pointer ray meets the engine's ground, not this.
-            raycast={() => undefined}
-        >
-            <HeightfieldGeometry surface={surface} />
-        </mesh>
+        <>
+            <mesh
+                ref={meshRef}
+                name="ground cover"
+                rotation-x={-Math.PI / 2}
+                material={material}
+                receiveShadow
+                //  A pointer ray meets the engine's ground, not this.
+                raycast={() => undefined}
+            >
+                <HeightfieldGeometry surface={surface} />
+            </mesh>
+            <Outland
+                surface={surface}
+                groundRef={meshRef}
+                material={landMaterial}
+            />
+        </>
     );
 }
 
 /** The game's surface over the map's ground, and what stands round it. */
 export function GroundCover() {
-    const ground = useTrait(useQueryFirst(Ground), Ground);
+    const ground = useTrait(useQueryFirst(GroundTrait), GroundTrait);
     const headless = useHeadless();
     if (!ground || headless) return null;
 
@@ -180,7 +213,6 @@ export function GroundCover() {
             <Suspense fallback={null}>
                 <GroundPaint surface={ground.surface} />
             </Suspense>
-            <Grass surface={ground.surface} />
         </>
     );
 }

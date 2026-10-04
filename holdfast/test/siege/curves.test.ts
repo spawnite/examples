@@ -26,7 +26,7 @@ afterEach(() => {
 
 /** The cards a warden holds on average entering wave `wave`: one taken
  *  after each wave held, each card of the deck as likely as another, so a
- *  share of each card's modifiers. The Storm Lance changes the lance, not
+ *  share of each card's modifiers. The Lance changes the lance, not
  *  the blaster, so it is left out. */
 function holdAveragePicks(warden: Entity, wave: number) {
     const deck = Object.values(CardId).filter((id) => id !== CardId.StormLance);

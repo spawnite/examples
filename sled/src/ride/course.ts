@@ -1,21 +1,22 @@
-import { trait, type Entity, type World } from "koota";
+import { createQuery, trait, type Entity, type World } from "koota";
 import {
+    defineBehaviour,
     failRound,
     finishRound,
-    registerBehaviour,
-    RoundState,
-    RoundTrait,
+    readEach,
+    RoundMachine,
     RunContext,
+    states,
     TrackMoverTrait,
-    TrackTriggerMovers,
-    Wallet,
+    TrackTriggerMoversTrait,
+    updateEach,
+    WalletTrait,
     type AiMetadata,
-    type Behaviour,
     type System,
     type Track,
 } from "@spawnite/engine/core";
 import type { TrackLevel } from "@spawnite/schema";
-import { rideHeight } from "./rider";
+import { endBrake, rideHeight } from "./rider";
 
 //  What the rider meets on the way down, each an engine TrackTrigger in
 //  track coordinates: the rocks that stun or crash it, the coins, and the
@@ -138,20 +139,14 @@ const courseWords: Record<CourseKind, AiMetadata> = {
     [CourseKind.Finish]: { is: "the finish line" },
 };
 
-export const CourseBehaviour: Behaviour<typeof CourseTrait> = {
+export const CourseBehaviour = defineBehaviour({
+    name: "course",
     trait: CourseTrait,
-    source: "games/sled/src/ride/course.ts",
+    source: "src/ride/course.ts",
     description: "Stuns, crashes, pays or finishes the rider who enters it.",
     ai: ({ kind }) => courseWords[kind],
     runsOn: RunContext.Client,
-};
-
-/** Why a run failed, as the round keeps it: out of steam, or wiped out on
- *  the rocks. */
-export enum RunEnd {
-    Crashed = "crashed",
-    Wiped = "wiped",
-}
+});
 
 /** Metres a second down the run under which the sled is stalling, and the
  *  seconds it stalls before the run is out of steam. Along the track only,
@@ -159,41 +154,121 @@ export enum RunEnd {
 export const stallSpeed = 2;
 export const stallSeconds = 1.5;
 
-/** The rider's run: the stun left from its last hit, and the seconds it
- *  has been slower than `stallSpeed`. */
-export const RunTrait = trait({ stunSeconds: 0, slowSeconds: 0 });
+/** The rider's run, from the sling to its end: on the sling, riding,
+ *  stunned by a hit, or ended, `crashed` being out of steam, slow for
+ *  longer than the stall. The sling's fire launches it; the course sends
+ *  it each hit, the finish, and the end of its steam. The stun is a wait.
+ *  An ended run's state is the reason the round keeps. */
+export const RunMachine = states({
+    id: "run",
+    description: "The rider's run: on the sling, riding, stunned, then ended.",
+    initial: "aiming",
+    states: {
+        aiming: { on: { LAUNCH: "riding" } },
+        riding: {
+            on: {
+                HIT: "stunned",
+                WIPE_OUT: "wiped",
+                FINISH: "finished",
+                OUT_OF_STEAM: "crashed",
+            },
+        },
+        stunned: {
+            wait: { seconds: stunSeconds, then: "riding" },
+            on: {
+                HIT: "wiped",
+                WIPE_OUT: "wiped",
+                FINISH: "finished",
+                OUT_OF_STEAM: "crashed",
+            },
+        },
+        finished: {},
+        crashed: {},
+        wiped: {},
+    },
+});
 
-export const RunBehaviour: Behaviour<typeof RunTrait> = {
+/** A state of the run, as its machine names it, such as `"crashed"`: the
+ *  reason the round keeps for a run that ended short of the line. */
+export type RunStateName = ReturnType<typeof RunMachine.read>["value"];
+
+/** The rider's run: the run machine's snapshot. */
+export const RunTrait = RunMachine.trait;
+
+export const RunBehaviour = defineBehaviour({
+    name: "run",
     trait: RunTrait,
-    source: "games/sled/src/ride/course.ts",
-    description: "Stuns the rider on a hit, and ends its run.",
-    ai: ({ stunSeconds }) => ({ facts: stunSeconds > 0 ? ["stunned"] : [] }),
+    source: "src/ride/course.ts",
+    description: "Runs the rider from the sling to its end.",
     runsOn: RunContext.Client,
-};
+});
 
-//  Named in the dump and read by the AI tree, with no component mounted.
-registerBehaviour("course", CourseBehaviour);
-registerBehaviour("run", RunBehaviour);
+function isSlow(rider: Entity) {
+    return (rider.get(TrackMoverTrait)?.speed ?? 0) < stallSpeed;
+}
 
-/** Ends the round, won or failed for `reason`, and stops the rider dead
- *  where it ended. */
-function endRun(world: World, rider: Entity, reason?: RunEnd) {
-    if (reason) failRound(world, reason);
-    else finishRound(world);
-    rider.set(TrackMoverTrait, { enabled: false, speed: 0 });
+/** Whether the rider's run is on, riding or stunned, and slower than
+ *  `stallSpeed`. */
+function isStalling(rider: Entity) {
+    return isRiding(rider) && isSlow(rider);
+}
+
+/** The rider's pace, a machine beside the run so the stall counts on
+ *  through a stun: a machine counts one wait at a time, and the stun is
+ *  the run's. It stalls while the run rides slower than `stallSpeed`, and
+ *  the course ends the run on a slow step once it has stalled. */
+export const PaceMachine = states({
+    id: "pace",
+    description: "The rider's pace: sliding, or stalling slower than 2 m/s.",
+    initial: "sliding",
+    states: {
+        sliding: { when: [[isStalling, "stalling"]] },
+        stalling: {
+            wait: { seconds: stallSeconds, then: "stalled" },
+            when: [[(rider) => !isSlow(rider), "sliding"]],
+        },
+        stalled: { when: [[(rider) => !isSlow(rider), "sliding"]] },
+    },
+});
+
+/** The rider's pace: the pace machine's snapshot. */
+export const PaceTrait = PaceMachine.trait;
+
+export const PaceBehaviour = defineBehaviour({
+    name: "pace",
+    trait: PaceTrait,
+    source: "src/ride/course.ts",
+    description: "Counts the rider's stall while it rides.",
+    runsOn: RunContext.Client,
+});
+
+/** Whether `rider`'s run is between the launch and its end: riding or
+ *  stunned. */
+export function isRiding(rider: Entity) {
+    return rider.has(RunMachine.is.riding) || rider.has(RunMachine.is.stunned);
+}
+
+function isEnded(rider: Entity) {
+    return (
+        rider.has(RunMachine.is.finished) ||
+        rider.has(RunMachine.is.crashed) ||
+        rider.has(RunMachine.is.wiped)
+    );
 }
 
 /** A rock hits the rider: the first halves its speed and stuns it, and a
- *  second inside the stun, or any boulder, wipes the run out. True when it
- *  wiped out. */
+ *  second inside the stun, or any boulder, wipes the run out and stops the
+ *  rider dead where it hit; `letGoEndedRuns` lets it drop to the snow
+ *  there. True when it wiped out. */
 export function hitRider(rider: Entity, lethal: boolean) {
-    const chained = (rider.get(RunTrait)?.stunSeconds ?? 0) > 0;
-    rider.set(RunTrait, { stunSeconds });
-    if (!chained)
+    if (lethal) RunMachine.send(rider, "WIPE_OUT");
+    else if (RunMachine.send(rider, "HIT") && rider.has(RunMachine.is.stunned))
         rider.set(TrackMoverTrait, (mover) => ({
             speed: mover.speed * stunSpeedCut,
         }));
-    return chained || lethal;
+    const wiped = rider.has(RunMachine.is.wiped);
+    if (wiped) rider.set(TrackMoverTrait, { speed: 0 });
+    return wiped;
 }
 
 /** Whether the rider is drawn with `left` seconds of stun: it blinks while
@@ -202,49 +277,93 @@ export function readRiderVisible(left: number) {
     return left <= 0 || Math.floor(left * blinkRate * 2) % 2 === 0;
 }
 
-function isPlaying(world: World) {
-    const round = world.queryFirst(RoundTrait)?.get(RoundTrait);
-    return round?.state === RoundState.Playing;
+//  Created once, for the engine's walks, which build no array a step.
+const riders = createQuery(RunTrait, TrackMoverTrait);
+const runs = createQuery(RunTrait);
+const triggers = createQuery(CourseTrait, TrackTriggerMoversTrait);
+const stalled = createQuery(PaceMachine.is.stalled);
+const pending: Entity[] = [];
+//  Declared once, with no destructuring, so a step allocates no closure
+//  and no iterator.
+const collectWalletless = (_: unknown, rider: Entity) => {
+    if (!rider.has(WalletTrait)) pending.push(rider);
+};
+const collectEntered = (
+    traits: [unknown, { entered: Entity[] }],
+    entity: Entity,
+) => {
+    if (traits[1].entered.length > 0) pending.push(entity);
+};
+const collectStalling = (_: unknown, rider: Entity) => {
+    if (isStalling(rider)) pending.push(rider);
+};
+
+function isRoundPlaying(world: World) {
+    return world.queryFirst(RoundMachine.is.playing) !== undefined;
 }
 
-/** While the round plays: counts each rider's stun down, acts on each
- *  course trigger for each rider that came into it this step, then fails
- *  the run once a rider has stalled. The finish comes first, so crawling
- *  over the line on the step the stall runs out is a finish. After the
- *  engine's move, which marks the triggers. Each rider carries a wallet
- *  from its first step, so the HUD shows none rather than the last run's.
- */
-export const rideCourse: System = (world, { deltaSeconds }) => {
-    const riders = world.query(RunTrait, TrackMoverTrait);
-    for (const rider of riders) if (!rider.has(Wallet)) rider.add(Wallet);
-    if (!isPlaying(world)) return;
-    for (const rider of riders)
-        rider.set(RunTrait, (run) => ({
-            stunSeconds: Math.max(0, run.stunSeconds - deltaSeconds),
-        }));
-    for (const entity of world.query(CourseTrait, TrackTriggerMovers)) {
+/** Lets go of the steer and the jump of each rider whose run has ended,
+ *  and brakes it, so it glides on under the end screen to rest on the
+ *  snow, where its mover stops. A wiped rider has no speed left, so it
+ *  only drops to the snow. Between the input and the move. */
+export const letGoEndedRuns: System = (world, { deltaSeconds }) => {
+    updateEach(world, riders, ([, mover], rider) => {
+        if (!isEnded(rider)) return;
+        mover.steer = 0;
+        mover.jump = false;
+        if (!mover.enabled) return;
+        mover.speed = Math.max(0, mover.speed - endBrake * deltaSeconds);
+        //  Stopped on the snow, or the slope's pull would creep it on at
+        //  rest.
+        if (mover.speed === 0 && mover.height <= 0) mover.enabled = false;
+    });
+};
+
+/** Hands each ended run to the round, once, while it plays: won over the
+ *  line, or failed with the run's state as the reason. */
+function endRuns(world: World) {
+    readEach(world, runs, (_, rider) => {
+        if (!isEnded(rider) || !isRoundPlaying(world)) return;
+        if (rider.has(RunMachine.is.finished)) finishRound(world);
+        else failRound(world, RunMachine.read(rider).value);
+    });
+}
+
+/** Acts on each course trigger for each riding rider that came into it
+ *  this step, then ends the run of one that is still slow once its pace
+ *  has stalled: slow for longer
+ *  than the stall. The finish comes first, so crawling over the line on
+ *  the step the stall runs out is a finish. After the engine's move, which
+ *  marks the triggers, and before the round's clock, so the round ends in
+ *  the step the run does. Each rider carries a wallet from its first
+ *  step, so the HUD shows none rather than the last run's. */
+export const rideCourse: System = (world) => {
+    //  Collected, then changed: the walks never add, remove or destroy
+    //  under themselves.
+    pending.length = 0;
+    readEach(world, riders, collectWalletless);
+    for (const rider of pending) rider.add(WalletTrait);
+    pending.length = 0;
+    readEach(world, triggers, collectEntered);
+    for (const entity of pending) {
         const kind = entity.get(CourseTrait)?.kind;
-        for (const rider of entity.get(TrackTriggerMovers)?.entered ?? []) {
-            if (!isPlaying(world)) return;
-            if (!rider.has(RunTrait)) continue;
-            if (kind === CourseKind.Finish) endRun(world, rider);
+        for (const rider of entity.get(TrackTriggerMoversTrait)?.entered ??
+            []) {
+            if (!isRiding(rider)) continue;
+            if (kind === CourseKind.Finish) RunMachine.send(rider, "FINISH");
             else if (kind === CourseKind.Coin) {
-                rider.set(Wallet, (wallet) => ({ coins: wallet.coins + 1 }));
+                rider.set(WalletTrait, (wallet) => ({
+                    coins: wallet.coins + 1,
+                }));
                 entity.destroy();
                 break;
-            } else if (hitRider(rider, kind === CourseKind.Boulder))
-                endRun(world, rider, RunEnd.Wiped);
+            } else hitRider(rider, kind === CourseKind.Boulder);
         }
     }
-    for (const rider of riders) {
-        if (!isPlaying(world)) return;
-        const slow = (rider.get(TrackMoverTrait)?.speed ?? 0) < stallSpeed;
-        rider.set(RunTrait, (run) => ({
-            slowSeconds: slow ? run.slowSeconds + deltaSeconds : 0,
-        }));
-        //  Past it by more than half a step, as summed steps drift.
-        const slowSeconds = rider.get(RunTrait)?.slowSeconds ?? 0;
-        if (slowSeconds - deltaSeconds / 2 > stallSeconds)
-            endRun(world, rider, RunEnd.Crashed);
-    }
+    //  A send rather than a `when` on the run: the machines step after the
+    //  round's clock, and the round ends in the step the run does.
+    pending.length = 0;
+    readEach(world, stalled, collectStalling);
+    for (const rider of pending) RunMachine.send(rider, "OUT_OF_STEAM");
+    endRuns(world);
 };

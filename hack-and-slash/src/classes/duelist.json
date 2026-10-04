@@ -1,0 +1,60 @@
+{
+    "name": "Duelist",
+    "kind": "hybrid",
+    "weapon": "sword",
+    "pair": ["swordsman", "bowgunner"],
+    "description": "Blade and bowgun at once: cuts what is close, shoots what is not.",
+    "color": "#e8c66a",
+    "skills": [
+        {
+            "id": "mixedArms",
+            "name": "Mixed Arms",
+            "description": "A sword in one hand, a crossbow in the other.",
+            "sign": "twinBlades",
+            "color": "#e8c66a",
+            "row": 0,
+            "column": 0,
+            "ranks": 1,
+            "weapon": "any",
+            "unlocks": ["mixedArms"]
+        },
+        {
+            "id": "quickdraw",
+            "name": "Quickdraw",
+            "description": "Faster with either weapon.",
+            "sign": "haste",
+            "color": "#ffd24a",
+            "row": 1,
+            "column": 0,
+            "ranks": 3,
+            "weapon": "any",
+            "needsSkill": "mixedArms",
+            "needsRank": 1,
+            "modifiers": [
+                {
+                    "stat": "attackSpeed",
+                    "perRank": 5
+                }
+            ]
+        },
+        {
+            "id": "fencersEye",
+            "name": "Fencer's Eye",
+            "description": "An eye for the opening.",
+            "sign": "aim",
+            "color": "#ff8a5c",
+            "row": 1,
+            "column": 1,
+            "ranks": 3,
+            "weapon": "any",
+            "needsSkill": "mixedArms",
+            "needsRank": 1,
+            "modifiers": [
+                {
+                    "stat": "critChance",
+                    "perRank": 3
+                }
+            ]
+        }
+    ]
+}

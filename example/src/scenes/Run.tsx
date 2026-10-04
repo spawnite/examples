@@ -4,12 +4,9 @@ import {
     CameraTarget,
     Hud,
     Panel,
-    Player,
     Round,
     RoundScreen,
     Slot,
-    Sound,
-    sounds,
     Text,
     World,
     type Position,
@@ -20,6 +17,12 @@ import { Coin } from "../components/Coin";
 import { Ring } from "../components/Ring";
 import { RoundClock } from "../components/RoundClock";
 import { Tree } from "../components/Tree";
+import { Spirit } from "../components/Spirit";
+
+//  A room and `spawnite simulate` load this file alone, so it exports the
+//  game's plugins and its save.
+export { plugins } from "../game";
+export { save } from "../save";
 
 /** Three coins in a line ahead of the player, a tree beside them, then the
  *  ball, and the ring past them. The round is won with every coin. */
@@ -36,7 +39,7 @@ const ringPosition: Position = [0, 0, -10];
 export function Run() {
     return (
         <World map="meadow">
-            <Player footsteps={sounds.footstepsGrass} />
+            <Spirit />
             {/*  The orbit it has always had: the left button's drag,
                 and no click-to-walk. */}
             <Camera
@@ -44,7 +47,6 @@ export function Run() {
                 preset={CameraPreset.Classic}
                 clickToWalk={false}
             />
-            <Sound url={sounds.forestAmbience} loop volume={0.5} />
             <Round seconds={20} target={coinPositions.length} />
             <RoundClock />
             <RoundScreen />

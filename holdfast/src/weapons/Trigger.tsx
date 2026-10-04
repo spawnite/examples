@@ -1,16 +1,20 @@
 import { useFrame, useThree, type Size } from "@react-three/fiber";
 import type { Entity, World } from "koota";
-import { useWorld } from "koota/react";
-import { useEffect, useRef, useState } from "react";
+import { useTraitEffect, useWorld } from "koota/react";
+import { useEffect, useRef } from "react";
 import { Ray, Raycaster, Vector2, Vector3, type Camera } from "three";
 import {
     aimShot,
+    scaleZoneDamage,
     fanPellet,
     findDrawnTarget,
     findPlayerHero,
     HealthTrait,
+    holdsWeapon,
+    isCursorCaptured,
     measureCoverDistance,
     readWeaponNumber,
+    ShotResultsTrait,
     useHeadless,
     useRoom,
     WeaponNumber,
@@ -18,30 +22,49 @@ import {
     type TargetSearch,
     type WeaponSettings,
 } from "@spawnite/engine";
-import { blasterSettings, blasterWeapon } from "../siege/blaster";
-import { CardId } from "../siege/cards";
+import { GunId, guns, readGun } from "../siege/guns";
 import { lanceSettings, lanceWeapon } from "../siege/lance";
 import { WardenTrait } from "../siege/traits";
 import { playSound, Sound } from "../audio/sounds";
-import { HitMark, markHit } from "../hud/HitMarker";
-import { Beam, measureBeamSeconds, type DrawnBeam } from "../views/Beam";
+import {
+    HitMark,
+    markHit,
+    settleHitMark,
+    takeBackHitMark,
+} from "../hud/HitMarker";
+import {
+    Beam,
+    measureBeamSeconds,
+    useBeams,
+    type DrawnBeam,
+} from "../views/Beam";
+import { kickCamera, readShotLook } from "./looks";
+import { kickView } from "../views/shakes";
 import { readWardenColor } from "../views/palette";
 import { findMuzzle, markShot } from "../views/warden/muzzles";
+import { LifeMachine } from "../siege/life";
 
-//  Her trigger on this page: the left button, held, fires the blaster at
-//  her rate from her barrel toward what the crosshair meets; the right
-//  fires the Storm Lance once she has taken its card. Each pull goes to
-//  the room, and its lines are drawn at once, with the gun's flash and the
-//  crosshair's mark. The room judges each pellet and streams where it
-//  ended to everyone else.
+//  Her trigger on this page: the left button, held, fires the gun from the
+//  rack she holds at her rate from her barrel toward what the crosshair
+//  meets; the right fires the lance once she has taken its card.
+//  Each pull goes to the room, and its lines are drawn at once, with the
+//  gun's flash, its sound and the crosshair's mark, gold with a ding where
+//  a pellet struck a weak spot, and a shot the room refuses takes back its
+//  mark and its lines' hits. The room judges each pellet and streams where
+//  it ended to everyone else, and its word on the weak spot settles the
+//  mark.
 
-/** A weapon a button fires: its name as the room knows it, its settings,
- *  and whether its beam draws heavy. */
+/** A weapon a button fires: its name as the room knows it, and its
+ *  settings. */
 interface Armament {
     name: string;
     settings: WeaponSettings;
-    heavy: boolean;
 }
+
+/** How hard a rail shot that kills through a weak spot shakes her own
+ *  camera: a small kick, under a reaction's, stacked with the shot's own
+ *  no higher than her shots' cap. */
+const railKillShake = 0.25;
 
 /** The mouse's left and right buttons, as a pointer event numbers them. */
 enum MouseButton {
@@ -49,18 +72,15 @@ enum MouseButton {
     Right = 2,
 }
 
-const armaments: Partial<Record<MouseButton, Armament>> = {
-    [MouseButton.Left]: {
-        name: blasterWeapon,
-        settings: blasterSettings,
-        heavy: false,
-    },
-    [MouseButton.Right]: {
-        name: lanceWeapon,
-        settings: lanceSettings,
-        heavy: true,
-    },
-};
+/** The weapon `button` fires for `hero`: her gun from the rack on the
+ *  left, the lance on the right. */
+function readArmament(button: MouseButton, hero: Entity): Armament | undefined {
+    if (button === MouseButton.Right)
+        return { name: lanceWeapon, settings: lanceSettings };
+    if (button !== MouseButton.Left) return undefined;
+    const { gun } = readGun(hero);
+    return { name: gun, settings: guns[gun].settings };
+}
 
 //  Written in place for each pull: the middle of the screen, the ray
 //  through it, each pellet's test against what this page draws, and its
@@ -94,10 +114,21 @@ interface Pull {
     nextId: () => number;
 }
 
-/** What one pull drew: its lines, and whether it hit and killed. */
+/** The lines one shot drew, and the second on the canvas's clock the last
+ *  of them goes. */
+interface ShotLines {
+    lines: DrawnBeam[];
+    until: number;
+}
+
+/** What one pull drew: its lines, whether it hit and killed, whether a
+ *  pellet struck a weak spot, and the room's number for its shot, where it
+ *  is in a room. */
 interface PullDrawn {
     lines: DrawnBeam[];
     killing: boolean;
+    critical: boolean;
+    shot: number | null;
 }
 
 /** Sends the pull to the room, and returns each pellet's line as the room
@@ -113,6 +144,7 @@ function firePull({
     nextId,
 }: Pull): PullDrawn | null {
     const { settings } = armament;
+    const look = readShotLook(armament.name);
     //  From her barrel, so the bolt she sees is the ray the room judges.
     const aimed = aimShot(world, {
         hero,
@@ -122,7 +154,7 @@ function firePull({
         muzzle: findMuzzle(hue, muzzle) ? muzzle : undefined,
     });
     if (!aimed) return null;
-    useRoom.getState().sendShot({
+    const shot = useRoom.getState().sendShot({
         weapon: armament.name,
         origin: aimed.origin.toArray(),
         direction: aimed.direction.toArray(),
@@ -130,8 +162,16 @@ function firePull({
     const range = readWeaponNumber(settings, hero, WeaponNumber.Range);
     const pellets = readWeaponNumber(settings, hero, WeaponNumber.Pellets);
     const damage = readWeaponNumber(settings, hero, WeaponNumber.Damage);
+    const spread = readWeaponNumber(settings, hero, WeaponNumber.Spread);
+    const zoneDamage = readWeaponNumber(
+        settings,
+        hero,
+        WeaponNumber.ZoneDamage,
+    );
     const color = readWardenColor(hue);
+    const held = readGun(hero);
     let killing = false;
+    let critical = false;
     const lines: DrawnBeam[] = [];
     for (let pellet = 0; pellet < pellets; pellet++) {
         const pelletRay = search.test.ray;
@@ -141,22 +181,24 @@ function firePull({
                 direction: aimed.direction,
                 pellet,
                 pellets,
-                spread: settings.spread ?? 0,
+                spread,
             },
             pelletRay.direction,
         );
         search.test.range = range;
         search.shooter = hero;
-        const { target, distance } = findDrawnTarget(world, search);
+        const { target, distance, zone } = findDrawnTarget(world, search);
         cover.range = range;
         cover.target = target;
         const coverDistance = measureCoverDistance(world, cover);
         const hit = target !== null && distance <= coverDistance;
-        if (hit && (target.get(HealthTrait)?.current ?? Infinity) <= damage)
+        const dealt = scaleZoneDamage(damage, zone, zoneDamage);
+        if (hit && (target.get(HealthTrait)?.current ?? Infinity) <= dealt)
             killing = true;
-        //  A lance passes through what it hits: its beam runs on to cover
-        //  or its range.
-        const through = armament.heavy ? coverDistance : distance;
+        if (hit && zone) critical = true;
+        //  A rail or a lance passes through what it hits: its line runs on
+        //  to cover or its range.
+        const through = look.through ? coverDistance : distance;
         lines.push({
             id: nextId(),
             from: aimed.origin.clone(),
@@ -166,16 +208,13 @@ function firePull({
             ),
             color,
             hit,
-            heavy: armament.heavy,
+            kind: look.beam,
+            range,
+            tier: armament.name === held.gun ? held.tier : 0,
+            shooter: hue,
         });
     }
-    return { lines, killing };
-}
-
-/** Whether she may fire what `button` names: the lance only once she has
- *  taken its card. */
-function isArmed(button: MouseButton, cards: string[]) {
-    return button !== MouseButton.Right || cards.includes(CardId.StormLance);
+    return { lines, killing, critical, shot };
 }
 
 export function Trigger() {
@@ -186,7 +225,36 @@ export function Trigger() {
     const pointerRef = useRef(new Vector2());
     const nextShotRef = useRef(new Map<MouseButton, number>());
     const lineIdRef = useRef(0);
-    const [lines, setLines] = useState<DrawnBeam[]>([]);
+    const { beams: lines, showBeams, rewriteBeams } = useBeams();
+    //  The lines each shot still shown drew, by the room's number for it,
+    //  and the second on the canvas's clock the last of them goes.
+    const shotLinesRef = useRef(new Map<number, ShotLines>());
+    const refusedShot = useRoom((state) => state.refusedShot);
+
+    //  The room's word on each of her shots' weak spots, which her mark
+    //  takes: a pull is critical where any of its pellets struck one.
+    useTraitEffect(world, ShotResultsTrait, (shots) => {
+        const { heroId } = useRoom.getState();
+        const judged = new Map<number, boolean>();
+        for (const { shooter, shot, hits } of shots?.results ?? []) {
+            if (shooter !== heroId || shot === undefined) continue;
+            const critical = hits.some(({ zone }) => zone !== undefined);
+            judged.set(shot, (judged.get(shot) ?? false) || critical);
+        }
+        for (const [shot, critical] of judged) settleHitMark(shot, critical);
+    });
+
+    //  A shot the room refused hit nothing: its mark comes off the
+    //  crosshair and its lines end on nothing, as the engine's weapon does.
+    useEffect(() => {
+        if (refusedShot === null) return;
+        takeBackHitMark(refusedShot.shot);
+        const refused = shotLinesRef.current.get(refusedShot.shot)?.lines;
+        if (!refused) return;
+        rewriteBeams((line) =>
+            refused.includes(line) ? { ...line, hit: false } : line,
+        );
+    }, [refusedShot, rewriteBeams]);
 
     useEffect(() => {
         if (headless) return;
@@ -197,8 +265,8 @@ export function Trigger() {
                 event.button !== MouseButton.Right
             )
                 return;
-            //  From the canvas alone, or anywhere while it holds the cursor:
-            //  a press on the HUD fires nothing.
+            //  From the canvas alone, or anywhere while the browser locks
+            //  the cursor to it: a press on the HUD fires nothing.
             const locked = canvas.ownerDocument.pointerLockElement === canvas;
             if (!locked && event.target !== canvas) return;
             heldRef.current.add(event.button);
@@ -245,20 +313,30 @@ export function Trigger() {
         return raycaster.ray;
     }
 
-    useFrame(({ camera, size, gl }) => {
+    useFrame(({ camera, size, gl, clock }) => {
+        for (const [shot, { until }] of shotLinesRef.current)
+            if (clock.elapsedTime >= until) shotLinesRef.current.delete(shot);
         if (headless || heldRef.current.size === 0) return;
         const now = performance.now();
         const hero = findPlayerHero(world);
         const survivor = hero?.get(WardenTrait);
-        if (!hero || !survivor || survivor.down) return;
-        const throughCrosshair =
-            gl.domElement.ownerDocument.pointerLockElement === gl.domElement;
+        //  Sheltered while she takes the cards she missed, she fires
+        //  nothing, as the room refuses her shots. Down, she fires at the
+        //  half rate her stats then give her.
+        if (!hero || !survivor || hero.has(LifeMachine.is.sheltered)) return;
+        const throughCrosshair = isCursorCaptured(gl.domElement);
         const drawn: DrawnBeam[] = [];
+        const shots: number[] = [];
+        //  Each sound once a frame, at the tier of the gun that fired it.
+        const sounds = new Map<Sound, number>();
         let hit = false;
         let killing = false;
+        let critical = false;
+        let railWeakSpotKill = false;
         for (const button of heldRef.current) {
-            const armament = armaments[button];
-            if (!armament || !isArmed(button, survivor.cards)) continue;
+            const armament = readArmament(button, hero);
+            //  The lance only once her card has the room hand it to her.
+            if (!armament || !holdsWeapon(hero, armament.name)) continue;
             if (now < (nextShotRef.current.get(button) ?? 0)) continue;
             nextShotRef.current.set(
                 button,
@@ -280,25 +358,48 @@ export function Trigger() {
                 nextId: () => lineIdRef.current++,
             });
             if (!pull) continue;
+            kickCamera(world, armament.name);
+            const { gun, tier } = readGun(hero);
+            const sound = readShotLook(armament.name).sound;
+            sounds.set(
+                sound,
+                Math.max(
+                    sounds.get(sound) ?? 0,
+                    armament.name === gun ? tier : 0,
+                ),
+            );
             drawn.push(...pull.lines);
+            if (pull.shot !== null) {
+                shots.push(pull.shot);
+                shotLinesRef.current.set(pull.shot, {
+                    lines: pull.lines,
+                    until:
+                        clock.elapsedTime +
+                        Math.max(
+                            ...pull.lines.map((line) =>
+                                measureBeamSeconds(line.kind),
+                            ),
+                        ),
+                });
+            }
             hit ||= pull.lines.some((line) => line.hit);
             killing ||= pull.killing;
+            critical ||= pull.critical;
+            railWeakSpotKill ||=
+                armament.name === GunId.Rail && pull.killing && pull.critical;
         }
         if (drawn.length === 0) return;
-        playSound(Sound.Shot);
+        for (const [sound, tier] of sounds) playSound(sound, { tier });
         markShot(survivor.hue);
         if (hit) {
             playSound(Sound.Hit);
-            markHit(killing ? HitMark.Kill : HitMark.Hit);
+            if (critical) playSound(Sound.Crit);
+            if (killing) playSound(Sound.Kill);
+            markHit(killing ? HitMark.Kill : HitMark.Hit, shots, critical);
         }
-        setLines((shown) => [...shown, ...drawn]);
-        setTimeout(
-            () =>
-                setLines((shown) =>
-                    shown.filter((line) => !drawn.includes(line)),
-                ),
-            measureBeamSeconds(drawn.some((line) => line.heavy)) * 1000,
-        );
+        //  The rail's payoff: a kill through a weak spot kicks her camera.
+        if (railWeakSpotKill) kickView(world, railKillShake);
+        showBeams(drawn);
     });
 
     return lines.map((line) => (
@@ -308,7 +409,10 @@ export function Trigger() {
             to={line.to}
             color={line.color}
             hit={line.hit}
-            heavy={line.heavy}
+            kind={line.kind}
+            range={line.range}
+            tier={line.tier}
+            shooter={line.shooter}
         />
     ));
 }

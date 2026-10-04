@@ -63,15 +63,15 @@ const weatherFragment = /* glsl */ `
 float stoneRise = clamp(vStoneLocal.y / uStoneHeight, 0.0, 1.0);
 float stoneBlotch = stoneNoise(vStoneWorld * 1.3) * 0.6 + stoneNoise(vStoneWorld * 4.1) * 0.4;
 float stoneStreak = stoneNoise(vStoneWorld * vec3(5.0, 0.6, 5.0));
-diffuseColor.rgb *= 0.78 + stoneBlotch * 0.4;
-diffuseColor.rgb *= 1.0 - smoothstep(0.55, 0.85, stoneStreak) * 0.25;
+diffuseColor.rgb *= 0.66 + stoneBlotch * 0.6;
+diffuseColor.rgb *= 1.0 - smoothstep(0.55, 0.85, stoneStreak) * 0.35;
 diffuseColor.rgb *= mix(0.5, 1.0, smoothstep(0.0, 0.4, stoneRise));
 float stoneMoss = smoothstep(0.35, 0.05, stoneRise) * smoothstep(0.4, 0.62, stoneBlotch)
     + smoothstep(0.55, 0.9, vStoneNormal.y) * smoothstep(0.5, 0.7, stoneBlotch) * 0.7;
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.2, 0.26, 0.11), clamp(stoneMoss, 0.0, 0.85));
 float stoneLichen = smoothstep(0.78, 0.84, stoneNoise(vStoneWorld * 7.0 + 3.1)) * smoothstep(0.3, 0.6, stoneRise);
 diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.6, 0.45), stoneLichen * 0.5);
-diffuseColor.rgb *= 1.0 + smoothstep(0.35, 0.9, vStoneNormal.y) * 0.3;
+diffuseColor.rgb *= 1.0 + smoothstep(0.35, 0.9, vStoneNormal.y) * 0.15;
 `;
 
 /** Where the runes are on the inner face, in the model's own units, and
@@ -83,13 +83,27 @@ float runeStroke = min(
     runeDistance((vStoneLocal.xy - vec2(0.0, 0.5)) / runeHalf, vStoneSeed),
     runeDistance((vStoneLocal.xy - vec2(0.0, 0.32)) / runeHalf, vStoneSeed + 0.37));
 float runeCore = (1.0 - smoothstep(0.1, 0.2, runeStroke)) * runeFace;
-float runeHalo = exp(-runeStroke * 3.5) * 0.3 * runeFace;
-diffuseColor.rgb *= 1.0 - (1.0 - smoothstep(0.14, 0.3, runeStroke)) * runeFace * 0.6;
+float runeHalo = exp(-runeStroke * 1.8) * 0.6 * runeFace;
+diffuseColor.rgb *= 1.0 - (1.0 - smoothstep(0.14, 0.3, runeStroke)) * runeFace * 0.75;
 `;
 
 const runeEmissive = /* glsl */ `
 float runeShimmer = 0.8 + 0.2 * sin(uTime * 2.5 - vStoneLocal.y * 30.0);
 totalEmissiveRadiance += uRuneColor * uRunePower * runeShimmer * (runeCore + runeHalo);
+`;
+
+/** The light falling on the stone, eased past a knee toward a ceiling: a
+ *  close flash or a low sun lights the face without bleaching it to white
+ *  under the tone mapping. The light is eased rather than the lit color,
+ *  so the weathering keeps its contrast, the light its hue, and the runes
+ *  stay brighter than the face round them. */
+const stoneShoulder = /* glsl */ `
+vec3 stoneLit = outgoingLight - totalEmissiveRadiance;
+vec3 stoneLight = stoneLit / max(diffuseColor.rgb, vec3(0.02));
+float stonePeak = max(max(stoneLight.r, stoneLight.g), stoneLight.b);
+float stoneOver = max(stonePeak - 1.2, 0.0);
+float stoneEased = 1.2 + stoneOver / (1.0 + stoneOver / 1.2);
+outgoingLight = stoneLit * (stoneOver > 0.0 ? stoneEased / stonePeak : 1.0) + totalEmissiveRadiance;
 `;
 
 interface StoneOptions {
@@ -101,7 +115,7 @@ interface StoneOptions {
 
 export function createStoneMaterial({ height, runes }: StoneOptions) {
     const material = new MeshStandardMaterial({
-        color: "#8c8a83",
+        color: "#6e6c67",
         roughness: 0.92,
         flatShading: true,
     });
@@ -133,6 +147,10 @@ vStoneSeed = fract(dot(modelMatrix[3].xz, vec2(0.173, 0.291)));`,
             .replace(
                 "#include <emissivemap_fragment>",
                 `#include <emissivemap_fragment>\n${runes ? runeEmissive : ""}`,
+            )
+            .replace(
+                "#include <opaque_fragment>",
+                `${runes ? stoneShoulder : ""}#include <opaque_fragment>`,
             );
     };
     //  The runes change the source, so each kind compiles its own program.

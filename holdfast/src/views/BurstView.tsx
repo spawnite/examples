@@ -1,5 +1,6 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import type { Entity } from "koota";
+import { useWorld } from "koota/react";
 import {
     useEffect,
     useLayoutEffect,
@@ -21,28 +22,42 @@ import {
     type Mesh,
     type Sprite,
 } from "three";
-import { Transform } from "@spawnite/engine";
+import { TransformTrait } from "@spawnite/engine";
 import { measureHearing, playSound, Sound } from "../audio/sounds";
 import { burstSeconds } from "../siege/effects";
 import { BurstKind, BurstTrait, MonsterKind } from "../siege/traits";
 import { borrowLight, emitShards, emitSparks } from "./effects/EffectPools";
+import { shakeView } from "./shakes";
 import {
     readGlowTexture,
     readPuffTexture,
     readTearTexture,
 } from "./glowTexture";
+import { recallCorpse } from "./monsters/Corpses";
 import { monsterLooks } from "./palette";
 
-//  The short effects the room spawns: a monster bursting into shards, sparks,
-//  a flash, a shockwave and a light as it falls, a rift tearing open in the
-//  ground with light spilling up and dust as one rises, and a pillar of
-//  light as a warden gets up. Each runs its whole show from when it mounts,
-//  whatever the stream does after, and builds only what its kind draws.
+//  The short effects the room spawns: a monster's death, a rift tearing
+//  open in the ground with light spilling up and dust as one rises or sinks
+//  back, and a pillar of light as a warden gets up. Each runs its whole show
+//  from when it mounts, whatever the stream does after, and builds only
+//  what its kind draws.
+//
+//  A death is ranked by what fell, so the moments that matter stand out of
+//  a crowd, as Vampire Survivors and Hades keep a full screen readable: the
+//  many plain deaths of a wave are a puff of dust and a few motes, a brute
+//  throws dust and debris, and only a colossus bursts with a flash, a
+//  shockwave and a light. Reactions, capstones and crits own the flashes.
 
-/** Shards a death throws. */
+/** Shards a colossus's death throws. */
 const shardCount = 14;
-/** Sparks a death throws, at size 1. */
+/** Sparks a colossus's death throws, at size 1. */
 const deathSparks = 14;
+/** Motes a plain death lets go, drifting up in the monster's color. */
+const moteCount = 5;
+/** Pieces a brute's death throws. */
+const debrisCount = 7;
+/** Seconds a death's dust takes to spread and fade. */
+const dustSeconds = 0.7;
 /** Seconds a death's flash and light last: the burst's heart, over well
  *  before its shards land. */
 const flashSeconds = 0.33;
@@ -52,12 +67,25 @@ const tearSeconds = 0.14;
 const dustCount = 5;
 
 const reviveTint = "#ffe7a3";
-/** How far toward white a burst's colours go: the dusk grading draws a
- *  fully saturated colour black. */
+/** How far toward white a burst's colours go, so their brightest part
+ *  burns toward white under the tone mapping, as a hot light does. */
 const tintWhiteness = 0.25;
+/** How hard a colossus's fall shakes the camera, and the metres from it at
+ *  which the shake fades to none: the whole circle feels it. */
+const colossusFallShake = 0.6;
+const colossusFallMetres = 45;
+/** A colossus's rising: the ground shakes a little less than at its fall,
+ *  and the rift lights the ground round it in its seams' colour for a
+ *  moment, with thunder an octave under the Storm strike's, so the night's
+ *  boss arrives rather than appears. */
+const colossusRiseShake = 0.45;
+const colossusRiseLight = { color: "#ff5a14", candela: 220, seconds: 1.6 };
 
 const white = new Color("#ffffff");
 const upward = new Vector3(0, 1, 0);
+const riseLightColor = new Color(colossusRiseLight.color);
+//  Written in place for each rising.
+const riseLightAt = new Vector3();
 /** A death's shockwave: a thin ring, so it reads as a wave and not a disc. */
 const waveGeometry = new RingGeometry(0.86, 1, 48);
 const tearGeometry = new PlaneGeometry(1, 1);
@@ -71,7 +99,8 @@ const sparkColor = new Color();
 const shardColor = new Color();
 const lightColor = new Color();
 
-function createGlow(color: Color) {
+/** A burst's glow on a mesh, added over what is behind it. */
+export function createGlow(color: Color) {
     return new MeshBasicMaterial({
         color,
         transparent: true,
@@ -81,7 +110,8 @@ function createGlow(color: Color) {
     });
 }
 
-function createGlowSprite(color: Color) {
+/** A burst's soft round glow, facing the camera. */
+export function createGlowSprite(color: Color) {
     return new SpriteMaterial({
         map: readGlowTexture(),
         color,
@@ -89,6 +119,17 @@ function createGlowSprite(color: Color) {
         blending: AdditiveBlending,
         depthWrite: false,
         toneMapped: false,
+    });
+}
+
+/** A rift's dust, drawn over the scene rather than added to it, so it
+ *  darkens what is behind. */
+export function createDust() {
+    return new SpriteMaterial({
+        map: readPuffTexture(),
+        color: riftDust,
+        transparent: true,
+        depthWrite: false,
     });
 }
 
@@ -134,7 +175,98 @@ interface KindProps {
     size: number;
 }
 
-/** A monster falling: a flash, a shockwave, and pooled shards, sparks and
+/** How a death shows, by what fell. */
+enum DeathRank {
+    /** The many: a husk, a skitter, a spitter. */
+    Plain = "plain",
+    /** A brute. */
+    Heavy = "heavy",
+    /** The night's boss. */
+    Boss = "boss",
+}
+
+function readDeathRank(monster: MonsterKind | undefined) {
+    if (monster === MonsterKind.Colossus) return DeathRank.Boss;
+    if (monster === MonsterKind.Brute) return DeathRank.Heavy;
+    return DeathRank.Plain;
+}
+
+const deathSounds: Record<DeathRank, Sound> = {
+    [DeathRank.Plain]: Sound.Fall,
+    [DeathRank.Heavy]: Sound.HeavyFall,
+    [DeathRank.Boss]: Sound.ColossusFall,
+};
+
+interface DustProps extends KindProps {
+    heavy: boolean;
+}
+
+/** A monster falling: a puff of dust at its feet and a few motes of its
+ *  color drifting up as the body slumps, and for a brute, dark debris
+ *  thrown wide. No flash and no light: the body's own fall is the show. */
+function DustBurst({ tint, size, heavy }: DustProps) {
+    const groupRef = useRef<Group>(null);
+    const dustRef = useRef<Group>(null);
+    const dustMaterial = useOwnedMaterial(createDust);
+    const puffs = heavy ? 3 : 2;
+    useBurstClock({
+        groupRef,
+        start: (group) => {
+            group.getWorldPosition(origin);
+            origin.y += size * 0.35;
+            emitSparks({
+                position: origin,
+                color: sparkColor.copy(tint).multiplyScalar(0.9),
+                count: heavy ? moteCount + 3 : moteCount,
+                speed: 1.6,
+                toward: upward,
+                spread: 0.8,
+                seconds: 0.8,
+                width: 0.05,
+                weight: -0.2,
+            });
+            if (heavy)
+                emitShards({
+                    position: origin,
+                    height: size * 0.35,
+                    color: shardColor.copy(riftDust).multiplyScalar(0.7),
+                    count: debrisCount,
+                    size: size * 0.45,
+                    seconds: burstSeconds,
+                });
+        },
+        draw: (seconds) => {
+            const age = Math.min(1, seconds / dustSeconds);
+            const spread = easeOut(age);
+            const children = dustRef.current?.children ?? [];
+            for (let index = 0; index < children.length; index++) {
+                const lean =
+                    children.length === 1
+                        ? 0
+                        : index / (children.length - 1) - 0.5;
+                children[index].position.set(
+                    lean * size * (0.5 + spread),
+                    size * (0.15 + spread * 0.35),
+                    (index % 2 === 0 ? 0.2 : -0.2) * size,
+                );
+                children[index].scale.setScalar(size * (0.6 + spread * 1.1));
+            }
+            dustMaterial.opacity = 0.55 * (1 - age) * (1 - age);
+        },
+    });
+
+    return (
+        <group ref={groupRef}>
+            <group ref={dustRef}>
+                {Array.from({ length: puffs }, (_, index) => (
+                    <sprite key={`puff-${index}`} material={dustMaterial} />
+                ))}
+            </group>
+        </group>
+    );
+}
+
+/** A colossus falling: a flash, a shockwave, and pooled shards, sparks and
  *  light. */
 function DeathBurst({ tint, size }: KindProps) {
     const groupRef = useRef<Group>(null);
@@ -209,34 +341,29 @@ function DeathBurst({ tint, size }: KindProps) {
 interface RiftBurstProps extends KindProps {
     /** Turns the tear, so no two rifts lie the same way. */
     turn: number;
+    /** Whether the rift takes a monster back rather than lets one out:
+     *  its body sinks into it, so the light spills lower. */
+    closing?: boolean;
 }
 
 /** A monster rising: a jagged tear that rips open in the ground, light
  *  spilling up out of it with embers, and dark dust thrown up. */
-function RiftBurst({ tint, size, turn }: RiftBurstProps) {
+function RiftBurst({ tint, size, turn, closing = false }: RiftBurstProps) {
     const groupRef = useRef<Group>(null);
     const tearRef = useRef<Mesh>(null);
     const spillRef = useRef<Sprite>(null);
     const dustRef = useRef<Group>(null);
     const tearMaterial = useOwnedMaterial(() => {
-        const tear = createGlow(tint.clone().multiplyScalar(2.4));
+        //  A wave's batch rises together, so each rift stays a glint in the
+        //  ground rather than a flare.
+        const tear = createGlow(tint.clone().multiplyScalar(1.5));
         tear.map = readTearTexture();
         return tear;
     });
     const spillMaterial = useOwnedMaterial(() =>
-        createGlowSprite(tint.clone().lerp(white, 0.1).multiplyScalar(1.2)),
+        createGlowSprite(tint.clone().lerp(white, 0.1).multiplyScalar(0.8)),
     );
-    //  Drawn over the scene rather than added to it, so it darkens what is
-    //  behind.
-    const dustMaterial = useOwnedMaterial(
-        () =>
-            new SpriteMaterial({
-                map: readPuffTexture(),
-                color: riftDust,
-                transparent: true,
-                depthWrite: false,
-            }),
-    );
+    const dustMaterial = useOwnedMaterial(createDust);
     useBurstClock({
         groupRef,
         start: (group) => {
@@ -264,13 +391,14 @@ function RiftBurst({ tint, size, turn }: RiftBurstProps) {
                 1,
             );
             tearMaterial.opacity = fade;
+            const reach = closing ? 0.5 : 1;
             spillRef.current?.scale.set(
                 size * 0.55 * open,
-                size * (0.6 + 1.9 * open),
+                size * (0.6 + 1.9 * open) * reach,
                 1,
             );
-            spillRef.current?.position.setY(size * (0.3 + 0.95 * open));
-            spillMaterial.opacity = fade * 0.7;
+            spillRef.current?.position.setY(size * (0.3 + 0.95 * open) * reach);
+            spillMaterial.opacity = fade * 0.45;
             const puffs = dustRef.current?.children ?? [];
             for (let index = 0; index < puffs.length; index++) {
                 const lean = (index / dustCount - 0.5) * 2;
@@ -341,6 +469,7 @@ export function BurstView({ entity }: BurstViewProps) {
     const [burst] = useState(() => entity.get(BurstTrait));
     const kind = burst?.kind ?? BurstKind.Death;
     const size = burst?.size ?? 1;
+    const rank = readDeathRank(burst?.monster);
     const tint = useMemo(
         () =>
             new Color(
@@ -352,19 +481,65 @@ export function BurstView({ entity }: BurstViewProps) {
     );
     const readThree = useThree((state) => state.get);
     //  A fall or a rise is heard, quieter the farther it is from the
-    //  camera.
+    //  camera; a recall's body sinks into its rift.
+    const world = useWorld();
     useEffect(() => {
-        const at = entity.get(Transform);
+        const at = entity.get(TransformTrait);
         if (kind === BurstKind.Revive || !at) return;
+        if (kind === BurstKind.Recall && burst?.monsterId)
+            recallCorpse(burst.monsterId);
+        //  A colossus's fall shakes the ground under the whole circle.
+        if (kind === BurstKind.Death && rank === DeathRank.Boss)
+            shakeView(world, {
+                strength: colossusFallShake,
+                at,
+                radius: colossusFallMetres,
+            });
         const metres = readThree().camera.position.distanceTo(at);
+        if (
+            kind === BurstKind.Rift &&
+            burst?.monster === MonsterKind.Colossus
+        ) {
+            shakeView(world, {
+                strength: colossusRiseShake,
+                at,
+                radius: colossusFallMetres,
+            });
+            borrowLight({
+                position: riseLightAt.set(at.x, at.y + 2, at.z),
+                color: riseLightColor,
+                intensity: colossusRiseLight.candela,
+                seconds: colossusRiseLight.seconds,
+            });
+            playSound(Sound.Thunderhead, {
+                volume: measureHearing(metres),
+                pitch: 0.5,
+            });
+        }
         const death = kind === BurstKind.Death;
-        playSound(death ? Sound.Kill : Sound.Rift, {
+        playSound(death ? deathSounds[rank] : Sound.Rift, {
             volume: measureHearing(metres),
         });
-    }, [entity, kind, readThree]);
+    }, [entity, world, kind, rank, burst, readThree]);
 
-    if (kind === BurstKind.Death) return <DeathBurst tint={tint} size={size} />;
-    if (kind === BurstKind.Rift)
-        return <RiftBurst tint={tint} size={size} turn={entity.id()} />;
+    if (kind === BurstKind.Death)
+        return rank === DeathRank.Boss ? (
+            <DeathBurst tint={tint} size={size} />
+        ) : (
+            <DustBurst
+                tint={tint}
+                size={size}
+                heavy={rank === DeathRank.Heavy}
+            />
+        );
+    if (kind === BurstKind.Rift || kind === BurstKind.Recall)
+        return (
+            <RiftBurst
+                tint={tint}
+                size={size}
+                turn={entity.id()}
+                closing={kind === BurstKind.Recall}
+            />
+        );
     return <ReviveBurst tint={tint} size={size} />;
 }

@@ -1,18 +1,20 @@
 // @vitest-environment node
 import type { Entity } from "koota";
 import { afterEach, expect, it } from "vitest";
-import { dealDamage, fixedStepSeconds, Transform } from "@spawnite/engine";
-import { spawnMonster } from "../../src/siege/monsters";
+import { PhaseMachine } from "../../src/siege/phase";
 import {
-    MonsterKind,
-    MonsterTrait,
-    SiegePhase,
-    WardenTrait,
-} from "../../src/siege/traits";
+    dealDamage,
+    requireAuthority,
+    fixedStepSeconds,
+    InputTrait,
+    TransformTrait,
+} from "@spawnite/engine";
+import { Vector3 } from "three";
+import { spawnMonster } from "../../src/siege/monsters";
+import { MonsterKind, MonsterTrait, WardenTrait } from "../../src/siege/traits";
 import {
     breatherSeconds,
     firstBreatherSeconds,
-    lobbySeconds,
     planWave,
     spawnMetres,
 } from "../../src/siege/waves";
@@ -51,38 +53,25 @@ function stepUntil(game: OpenedSiege, { done, seconds }: Wait) {
 /** Every monster standing, killed. */
 function killMonsters({ world }: OpenedSiege) {
     for (const monster of world.query(MonsterTrait))
-        dealDamage(monster, { amount: 1e6 });
+        dealDamage(requireAuthority(world), monster, { amount: 1e6 });
 }
 
 it("waits with no warden, and with wardens until one takes her place", async () => {
     siege = await openSiege();
     siege.step(1);
-    expect(readSiege(siege.world).phase).toBe(SiegePhase.Waiting);
+    expect(readSiege(siege.world).phase).toBe(PhaseMachine.is.waiting);
 
     const hero = joinWarden(siege, { name: "Ada", position: onField() });
     siege.step(1);
-    expect(readSiege(siege.world).phase).toBe(SiegePhase.Waiting);
+    expect(readSiege(siege.world).phase).toBe(PhaseMachine.is.waiting);
 
     takePlaces(siege, hero);
     siege.step(1);
 
     const state = readSiege(siege.world);
-    expect(state.phase).toBe(SiegePhase.Breather);
+    expect(state.phase).toBe(PhaseMachine.is.breather);
     expect(state.wave).toBe(0);
     expect(state.secondsLeft).toBeCloseTo(firstBreatherSeconds - 1, 1);
-});
-
-it("starts the run without a warden who never takes her place", async () => {
-    siege = await openSiege();
-    const ada = joinWarden(siege, { name: "Ada", position: onField(-3) });
-    joinWarden(siege, { name: "Bo", position: onField(3) });
-    takePlaces(siege, ada);
-
-    siege.step(lobbySeconds - 1);
-    expect(readSiege(siege.world).phase).toBe(SiegePhase.Waiting);
-    siege.step(1.1);
-
-    expect(readSiege(siege.world).phase).toBe(SiegePhase.Breather);
 });
 
 it("opens wave 1 when the breather runs out, and spawns all of it round the wardens", async () => {
@@ -94,14 +83,14 @@ it("opens wave 1 when the breather runs out, and spawns all of it round the ward
     //  How far each monster stood from her as it spawned.
     const distances: number[] = [];
     game.world.onAdd(MonsterTrait, (entity: Entity) => {
-        const at = entity.get(Transform);
-        const feet = hero.get(Transform);
+        const at = entity.get(TransformTrait);
+        const feet = hero.get(TransformTrait);
         if (at && feet)
             distances.push(Math.hypot(at.x - feet.x, at.z - feet.z));
     });
 
     game.step(firstBreatherSeconds + 0.1);
-    expect(readSiege(game.world).phase).toBe(SiegePhase.Fight);
+    expect(readSiege(game.world).phase).toBe(PhaseMachine.is.fight);
     expect(readSiege(game.world).wave).toBe(1);
     stepUntil(game, {
         done: () => readSiege(game.world).toSpawn === 0,
@@ -133,7 +122,7 @@ it("clears the wave when its last monster falls, and counts the next breather do
 
     const state = readSiege(game.world);
     expect(game.world.query(MonsterTrait)).toHaveLength(0);
-    expect(state.phase).toBe(SiegePhase.Breather);
+    expect(state.phase).toBe(PhaseMachine.is.breather);
     expect(state.wave).toBe(1);
     expect(state.secondsLeft).toBeCloseTo(breatherSeconds, 1);
 });
@@ -150,12 +139,13 @@ it("keeps a wave going while a monster of it still stands", async () => {
         seconds: 60,
     });
     const [survivor, ...rest] = game.world.query(MonsterTrait);
-    for (const monster of rest) dealDamage(monster, { amount: 1e6 });
+    for (const monster of rest)
+        dealDamage(requireAuthority(game.world), monster, { amount: 1e6 });
 
     game.step(1);
 
     expect(survivor.isAlive()).toBe(true);
-    expect(readSiege(game.world).phase).toBe(SiegePhase.Fight);
+    expect(readSiege(game.world).phase).toBe(PhaseMachine.is.fight);
 });
 
 it("makes every wave tougher and faster than the one before, and larger but for a boss wave's escort", () => {
@@ -184,13 +174,13 @@ it("walks a monster at the warden and strikes her once it reaches her", async ()
         seconds: 10,
     });
     const [monster] = game.world.query(MonsterTrait);
-    const start = monster.get(Transform)?.clone();
+    const start = monster.get(TransformTrait)?.clone();
     if (!start) throw new Error("The monster has no place.");
 
     game.step(1);
-    const after = monster.get(Transform);
+    const after = monster.get(TransformTrait);
     if (!after) throw new Error("The monster has no place.");
-    const feet = hero.get(Transform);
+    const feet = hero.get(TransformTrait);
     if (!feet) throw new Error("The warden has no place.");
     expect(after.distanceTo(feet)).toBeLessThan(start.distanceTo(feet) - 1);
 
@@ -236,6 +226,70 @@ it("forgets the wait for the others when the one warden who took her place leave
     ada.destroy();
     siege.step(fixedStepSeconds * 2);
 
-    expect(readSiege(siege.world).phase).toBe(SiegePhase.Waiting);
+    expect(readSiege(siege.world).phase).toBe(PhaseMachine.is.waiting);
     expect(readSiege(siege.world).secondsLeft).toBe(0);
+});
+
+it("raises wave 1's batches in front of where her camera faces, each batch together", async () => {
+    siege = await openSiege();
+    const game = siege;
+    const hero = joinWarden(game, { name: "Ada", position: onField() });
+    takePlaces(game, hero);
+    fortify(game, hero);
+    //  Her camera looks down -x.
+    if (!hero.has(InputTrait)) hero.add(InputTrait);
+    hero.set(InputTrait, { heading: Math.PI / 2 });
+    const spots: Vector3[] = [];
+    game.world.onAdd(MonsterTrait, (entity: Entity) => {
+        const at = entity.get(TransformTrait);
+        if (at) spots.push(at.clone());
+    });
+
+    game.step(firstBreatherSeconds + 0.1);
+    stepUntil(game, {
+        done: () => readSiege(game.world).toSpawn === 0,
+        seconds: 60,
+    });
+
+    const feet = hero.get(TransformTrait);
+    if (!feet) throw new Error("She has no feet.");
+    expect(spots.length).toBe(planWave(1, 1).count);
+    for (const at of spots) {
+        const away = new Vector3(at.x - feet.x, 0, at.z - feet.z).normalize();
+        //  Within 60 degrees of -x.
+        expect(-away.x).toBeGreaterThanOrEqual(Math.cos(Math.PI / 3) - 0.01);
+    }
+    //  The first batch rises together, from one rift.
+    expect(spots[0].distanceTo(spots[1])).toBeLessThan(3);
+});
+
+it("keeps wave 1's spawns fair for a warden facing out from the arena's edge", async () => {
+    siege = await openSiege();
+    const game = siege;
+    const hero = joinWarden(game, { name: "Ada", position: onField() });
+    takePlaces(game, hero);
+    fortify(game, hero);
+    game.step(firstBreatherSeconds - 1);
+    //  At the edge, her camera looking out along +x.
+    hero.get(TransformTrait)?.set(14, 0, 0);
+    if (!hero.has(InputTrait)) hero.add(InputTrait);
+    hero.set(InputTrait, { heading: -Math.PI / 2 });
+    const distances: number[] = [];
+    game.world.onAdd(MonsterTrait, (entity: Entity) => {
+        const at = entity.get(TransformTrait);
+        const feet = hero.get(TransformTrait);
+        if (at && feet)
+            distances.push(Math.hypot(at.x - feet.x, at.z - feet.z));
+    });
+
+    stepUntil(game, {
+        done: () =>
+            readSiege(game.world).wave === 1 &&
+            readSiege(game.world).toSpawn === 0,
+        seconds: 60,
+    });
+
+    expect(distances.length).toBeGreaterThan(0);
+    for (const distance of distances)
+        expect(distance).toBeGreaterThanOrEqual(spawnMetres.least - 0.01);
 });

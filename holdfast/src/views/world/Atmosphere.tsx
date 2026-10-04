@@ -15,10 +15,14 @@ import {
 import { useHeadless } from "@spawnite/engine";
 import { readGlowTexture } from "../glowTexture";
 import { duskAir } from "./air";
+import { nightSky } from "./night";
 
 //  What moves in the still air: banks of low mist drifting slowly round the
 //  forest's edge, and motes of dust and pollen that float over the circle
 //  and catch the firelight. Both are one draw each, moved in place.
+
+/** What the mist mixes into the air's colour. */
+const mistTint = new Color("#9aa6d6");
 
 /** Mist banks, where they lie, and how big each is, in metres. */
 const mistCount = 36;
@@ -78,10 +82,7 @@ function Mist() {
         () =>
             new MeshBasicMaterial({
                 map: readGlowTexture(),
-                color: new Color(duskAir.color).lerp(
-                    new Color("#9aa6d6"),
-                    0.35,
-                ),
+                color: new Color(duskAir.color).lerp(mistTint, 0.35),
                 transparent: true,
                 opacity: 0.16,
                 depthWrite: false,
@@ -100,6 +101,8 @@ function Mist() {
     useFrame(({ clock, camera }) => {
         const mesh = meshRef.current;
         if (!mesh) return;
+        //  The mist takes the night's air: blue at dusk, pale at sunrise.
+        material.color.copy(nightSky.air).lerp(mistTint, 0.35);
         const seconds = clock.elapsedTime;
         for (let index = 0; index < banks.length; index++) {
             const bank = banks[index];
@@ -154,7 +157,8 @@ uniform vec3 uColor;
 varying float vMoteFade;
 void main() {
     float fall = 1.0 - smoothstep(0.1, 0.5, length(gl_PointCoord - 0.5));
-    gl_FragColor = vec4(uColor * fall * vMoteFade * 0.6, 1.0);
+    //  Alpha carries the light, as the fireflies' does.
+    gl_FragColor = vec4(uColor, fall * vMoteFade * 0.6);
 }`;
 
 function createMoteMaterial() {

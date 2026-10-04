@@ -1,3 +1,6 @@
+import type { Entity } from "koota";
+import { FromWelcomeTrait } from "@spawnite/engine";
+import type { Knock } from "../../weapons/looks";
 import { createWalkCycle, type WalkCycle } from "../walkCycle";
 
 //  What a monster's view keeps between frames: its walk, and when it last
@@ -12,20 +15,32 @@ export interface MonsterMotion {
     /** Seconds its strike clip still has to catch up to the room's blow,
      *  taken a little each frame so the swing never jumps. */
     strikeLag: number;
+    /** How far its last hit pushes it back, by the gun that dealt it. */
+    knock: Knock;
+    /** Whether Storm dealt its last hit: its body keeps its colour then,
+     *  so the arc that reached it reads over it. */
+    stormHit: boolean;
 }
 
-export function createMonsterMotion(): MonsterMotion {
+/** The motion of `monster`'s view as it mounts: risen already where the
+ *  page's welcome found it, and climbing out of its rift where it spawned
+ *  while the page watched. */
+export function createMonsterMotion(monster: Entity): MonsterMotion {
     return {
         stride: createWalkCycle(),
-        bornAt: -Infinity,
+        bornAt: monster.has(FromWelcomeTrait) ? -riseSeconds : -Infinity,
         struckAt: -Infinity,
         hitAt: -Infinity,
         strikeLag: 0,
+        knock: { metres: 0, seconds: flashSeconds },
+        stormHit: false,
     };
 }
 
 /** Seconds a monster takes to climb out of its rift. */
 export const riseSeconds = 0.6;
+/** Seconds the colossus takes: slow enough to watch it arrive. */
+export const colossusRiseSeconds = 1.6;
 /** Seconds a hit's flash takes to fade. */
 export const flashSeconds = 0.12;
 

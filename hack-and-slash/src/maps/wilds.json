@@ -1,0 +1,117 @@
+{
+    "seed": 139,
+    "size": 144,
+    "cell": 1,
+    "hills": { "amplitude": 6, "wavelength": 40, "detail": 0 },
+    "scatter": {
+        "treeRound": 0.4,
+        "treeTall": 0.4,
+        "bushRound": 0.7,
+        "rockBoulder": 0.3,
+        "rockFlat": 0.3,
+        "grassTuft": 0.6,
+        "seedOffset": 0
+    },
+    "regions": {
+        "meadow": {
+            "center": [0, 0],
+            "radius": 20,
+            "fade": 12,
+            "hills": { "amplitude": 0, "wavelength": 40, "detail": 0 },
+            "scatter": {
+                "treeRound": 0.15,
+                "treeTall": 0.15,
+                "bushRound": 0.5,
+                "rockBoulder": 0.05,
+                "rockFlat": 0.05,
+                "grassTuft": 1,
+                "seedOffset": 1,
+                "clearing": 8
+            }
+        },
+        "hollow": {
+            "center": [42, -6],
+            "radius": 14,
+            "fade": 8,
+            "hills": { "amplitude": 0, "wavelength": 40, "detail": 0 },
+            "scatter": {
+                "treeRound": 0.25,
+                "treeTall": 0.7,
+                "bushRound": 0.7,
+                "rockBoulder": 0.3,
+                "rockFlat": 0.2,
+                "grassTuft": 0.8,
+                "seedOffset": 3,
+                "clearing": 10
+            }
+        },
+        "barrow": {
+            "center": [-42, -6],
+            "radius": 14,
+            "fade": 8,
+            "hills": { "amplitude": 0, "wavelength": 40, "detail": 0 },
+            "scatter": {
+                "treeRound": 0.05,
+                "treeTall": 0.12,
+                "bushRound": 0.2,
+                "rockBoulder": 0.6,
+                "rockFlat": 0.9,
+                "grassTuft": 0.5,
+                "seedOffset": 4,
+                "clearing": 10
+            }
+        },
+        "ashen": {
+            "center": [0, -48],
+            "radius": 15,
+            "fade": 8,
+            "hills": { "amplitude": 0, "wavelength": 40, "detail": 0 },
+            "scatter": {
+                "treeRound": 0,
+                "treeTall": 0.05,
+                "bushRound": 0.05,
+                "rockBoulder": 0.9,
+                "rockFlat": 0.9,
+                "grassTuft": 0.2,
+                "seedOffset": 5,
+                "clearing": 11
+            }
+        }
+    },
+    "paths": {
+        "toHollow": {
+            "halfWidth": 1.8,
+            "fade": 2,
+            "points": [
+                [10, -2],
+                [20, -3],
+                [30, -5],
+                [36, -6]
+            ],
+            "surface": "dirt"
+        },
+        "toBarrow": {
+            "halfWidth": 1.8,
+            "fade": 2,
+            "points": [
+                [-10, -2],
+                [-20, -3],
+                [-30, -5],
+                [-36, -6]
+            ],
+            "surface": "dirt"
+        },
+        "toAshen": {
+            "halfWidth": 1.8,
+            "fade": 2,
+            "points": [
+                [0, -20],
+                [1, -28],
+                [-1, -35],
+                [0, -40]
+            ],
+            "surface": "dirt"
+        }
+    },
+    "rim": 8
+}

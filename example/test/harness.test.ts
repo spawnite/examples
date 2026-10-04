@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import {
     BobTrait,
     BodyKind,
-    Collider,
+    ColliderTrait,
     ColliderShape,
     createHeadlessGame,
     dumpState,
@@ -14,8 +14,8 @@ import {
     sendInput,
     SpinTrait,
     stepSeconds,
-    Transform,
-    Wallet,
+    TransformTrait,
+    WalletTrait,
 } from "@spawnite/engine/core";
 import { Vector2 } from "three";
 import { ballPosition, coinPositions } from "../src/scenes/Run";
@@ -24,11 +24,11 @@ import { ballPosition, coinPositions } from "../src/scenes/Run";
 //  Spin, Bob, Pickup and collider fill.
 function spawnCoin(world: World): Entity {
     return world.spawn(
-        Transform(new Vector3(...coinPositions[0])),
+        TransformTrait(new Vector3(...coinPositions[0])),
         SpinTrait({ speed: 2 }),
         BobTrait({ height: 0.2 }),
         PickupTrait({ reward: 1 }),
-        Collider({
+        ColliderTrait({
             shape: ColliderShape.Box,
             kind: BodyKind.Kinematic,
             size: new Vector3(0.8, 0.1, 0.8),
@@ -39,8 +39,8 @@ function spawnCoin(world: World): Entity {
 /** The run's ball, as the headless scene spawns it. */
 function spawnBall(world: World): Entity {
     return world.spawn(
-        Transform(new Vector3(...ballPosition)),
-        Collider({
+        TransformTrait(new Vector3(...ballPosition)),
+        ColliderTrait({
             shape: ColliderShape.Sphere,
             kind: BodyKind.Dynamic,
             size: new Vector3(1, 1, 1),
@@ -65,14 +65,14 @@ it("rolls the ball away when she walks into it, and leaves the coin where it sit
 
     stepSeconds(game, 4);
 
-    const rolled = ball.get(Transform);
+    const rolled = ball.get(TransformTrait);
     if (!rolled) throw new Error("no ball");
     expect(rolled.z).toBeLessThan(z - 2);
     //  Still on the ground: neither through it nor lifted by the push.
     expect(rolled.y).toBeGreaterThan(y - 0.1);
     expect(rolled.y).toBeLessThan(y + 0.5);
     //  The coin bobs on the spot: a kinematic body neither falls nor drifts.
-    const rested = coin?.get(Transform);
+    const rested = coin?.get(TransformTrait);
     expect(rested?.x).toBe(coinPositions[0][0]);
     expect(rested?.z).toBe(coinPositions[0][2]);
     game.world.destroy();
@@ -85,7 +85,7 @@ it("credits the first coin to the player beside it within five seconds", async (
 
     stepSeconds(game, 5);
 
-    expect(player.get(Wallet)?.coins).toBe(1);
+    expect(player.get(WalletTrait)?.coins).toBe(1);
     expect(coin?.isAlive()).toBe(false);
     game.world.destroy();
 });

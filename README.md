@@ -2,7 +2,7 @@
 
 Spawnite is a game platform built for coding agents. Your agent writes the game in TypeScript and React on the Spawnite engine, then runs it headless, steps it, screenshots it and tests it from the command line, with no browser window. You publish the game to players on the web, the phone and the desktop. Multiplayer is built in: a game with more than one player runs in a server-authoritative room, and a single-player game needs none.
 
-This repository holds the platform's games as projects you can copy, one folder each. Every release of the `@spawnite` packages writes them again, so they match the packages you install. The files `game add` writes, one folder per template, are in [spawnite/templates](https://github.com/spawnite/templates).
+This repository holds the platform's games as projects you can copy, one folder each. Every release of the `@spawnite` packages writes them again, so they match the packages you install. The files `spawnite add` writes, one folder per template, are in [spawnite/templates](https://github.com/spawnite/templates).
 
 ## Install
 
@@ -27,17 +27,19 @@ The engine needs React, React Three Fiber and a few other peers beside it. [Inst
 
 ## What this repository holds
 
-Each folder is what `game create my-game --template <folder>` writes:
+Each folder is what `spawnite create my-game --template <folder>` writes:
 
-| Folder     | What it holds                                                                                          |
-| ---------- | ------------------------------------------------------------------------------------------------------ |
-| `example`  | A lobby, then a run through three coins to a goal ring                                                 |
-| `sled`     | A sled launched from a slingshot, down a snowy track to the finish gate                                |
-| `mmorpg`   | An avatar in an open meadow, with a bag of items and a save                                            |
-| `arena`    | Players in one room, monsters that chase them and coins to race for                                    |
-| `holdfast` | Co-op wave survival: hold the stone circle against the Hollow, one wave and one upgrade card at a time |
+| Folder           | What it holds                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `example`        | A lobby, then a run through three coins to a goal ring                                                  |
+| `sled`           | A sled launched from a slingshot, down a snowy track to the finish gate                                 |
+| `mmorpg`         | An avatar in an open meadow, with a bag of items and a save                                             |
+| `hack-and-slash` | Bladebound: a 2D hack and slash where a hero you dress hunts monsters, levels up and spends stat points |
+| `depthfield`     | A survivor arena: hold three minutes against the swarm on an angled neon field, then beat the boss      |
+| `arena`          | Players in one room, monsters that chase them and coins to race for                                     |
+| `holdfast`       | Co-op wave survival: hold the stone circle against the Hollow, one wave and one upgrade card at a time  |
 
-`sled`, `mmorpg`, `arena` and `holdfast` also import files from the platform's asset kit, which is not on npm, so `game create` refuses them: read and copy from them rather than install them. `arena` and `holdfast` play in a room, which runs only on Spawnite.
+`sled`, `mmorpg`, `depthfield`, `arena` and `holdfast` also import files from the platform's asset kit, which is not on npm, so their imports of it do not resolve after an install: read and copy from them rather than install them. `arena` and `holdfast` play in a room, which runs only on Spawnite.
 
 Each release replaces every folder here whole, so a change made to them in this repository does not last.
 

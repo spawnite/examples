@@ -2,8 +2,9 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { lygia, roomsContentPolicy } from "@spawnite/engine/vite";
+import { roomsContentPolicy, spawnite, wikiPages } from "@spawnite/engine/vite";
 import { watchModels } from "@spawnite/cli/models";
+import { devServer } from "@spawnite/dev-server/vite";
 
 export default defineConfig({
     //  Relative, so one build serves at the site's root or under a path.
@@ -11,21 +12,16 @@ export default defineConfig({
     plugins: [
         react(),
         tailwindcss(),
-        lygia(),
+        spawnite(),
         watchModels(),
+        wikiPages(),
         roomsContentPolicy(process.env.ROOMS_DOMAIN),
+        devServer(),
     ],
-    build: {
-        //  A sound is fetched when a view preloads it, never for the first
-        //  frame; under Vite's 4 kB limit it would ride in the entry chunk
-        //  as base64.
-        assetsInlineLimit: (file: string) =>
-            file.endsWith(".mp3") ? false : undefined,
-    },
     test: {
         globals: true,
         environment: "jsdom",
-        setupFiles: ["test/setup.ts"],
+        setupFiles: ["@spawnite/testing/setup"],
         include: ["test/**/*.test.{ts,tsx}"],
         //  Through Vite rather than Node: Node cannot load the stylesheets
         //  the devtools' bundle imports, and a test's mock of drei reaches

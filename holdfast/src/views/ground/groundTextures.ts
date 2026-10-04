@@ -1,11 +1,11 @@
-import cobblesColor from "@game/assets/textures/holdfast/cobbles-color.webp?url";
-import cobblesDetail from "@game/assets/textures/holdfast/cobbles-detail.webp?url";
-import slabsColor from "@game/assets/textures/holdfast/slabs-color.webp?url";
-import slabsDetail from "@game/assets/textures/holdfast/slabs-detail.webp?url";
-import grassColor from "@game/assets/textures/holdfast/grass-color.webp?url";
-import grassDetail from "@game/assets/textures/holdfast/grass-detail.webp?url";
-import pathColor from "@game/assets/textures/holdfast/path-color.webp?url";
-import pathDetail from "@game/assets/textures/holdfast/path-detail.webp?url";
+import cobblesColor from "@spawnite/assets/textures/holdfast/cobbles-color.webp?url";
+import cobblesDetail from "@spawnite/assets/textures/holdfast/cobbles-detail.webp?url";
+import slabsColor from "@spawnite/assets/textures/holdfast/slabs-color.webp?url";
+import slabsDetail from "@spawnite/assets/textures/holdfast/slabs-detail.webp?url";
+import grassColor from "@spawnite/assets/textures/holdfast/grass-color.webp?url";
+import grassDetail from "@spawnite/assets/textures/holdfast/grass-detail.webp?url";
+import pathColor from "@spawnite/assets/textures/holdfast/path-color.webp?url";
+import pathDetail from "@spawnite/assets/textures/holdfast/path-detail.webp?url";
 import { groundLayers } from "./groundShader";
 
 //  The four photographed surfaces the ground's paint lays down. Each colour

@@ -1,21 +1,26 @@
 // @vitest-environment node
 import type { World } from "koota";
+import { Vector3 } from "three";
 import { afterEach, expect, it } from "vitest";
 import {
     addStatModifier,
     dealDamage,
+    requireAuthority,
     fixedStepSeconds,
     HealthTrait,
     readWeaponNumber,
-    Transform,
-    Wallet,
+    WalletTrait,
     WeaponNumber,
 } from "@spawnite/engine";
 import { blasterSettings } from "../../src/siege/blaster";
-import { CardId, pickCard } from "../../src/siege/cards";
+import { CardId, offerCards, pickCard } from "../../src/siege/cards";
 import { spawnMonster } from "../../src/siege/monsters";
 import { WardenStat } from "../../src/siege/stats";
-import { CoinTrait, MonsterKind, WardenTrait } from "../../src/siege/traits";
+import {
+    CoinBurstsTrait,
+    MonsterKind,
+    WardenTrait,
+} from "../../src/siege/traits";
 import { monsterSettings, planWave } from "../../src/siege/waves";
 import { joinWarden, onField, openSiege, type OpenedSiege } from "./room";
 
@@ -55,18 +60,18 @@ function readBlaster(warden: Parameters<typeof readWeaponNumber>[1]) {
     };
 }
 
-it("hits as hard as her damage, which Heavy Rounds raises by a quarter", async () => {
+it("hits as hard as her damage, which Heavy Rounds raises by 15%", async () => {
     siege = await openSiege();
     const hero = joinWarden(siege, { name: "Ada", position: onField() });
     const before = readWeaponNumber(blasterSettings, hero, WeaponNumber.Damage);
 
-    hero.set(WardenTrait, { offer: [CardId.HeavyRounds] });
+    hero.set(WardenTrait, { offer: offerCards([CardId.HeavyRounds]) });
     pickCard(hero, 0);
 
     expect([
         before,
         readWeaponNumber(blasterSettings, hero, WeaponNumber.Damage),
-    ]).toEqual([10, 12.5]);
+    ]).toEqual([10, 11.5]);
 });
 
 it("fires at her rate, with her pellets and her pierce, as her stats give them", async () => {
@@ -84,52 +89,43 @@ it("fires at her rate, with her pellets and her pierce, as her stats give them",
     ]);
 });
 
-it("credits the kill to the warden whose shot took the monster's last health, and drops its coins where it fell", async () => {
+it("credits the kill to the warden whose shot took the monster's last health, and pays its coins to her from where it fell", async () => {
     siege = await openSiege();
     const hero = joinWarden(siege, { name: "Ada", position: onField() });
     siege.step(fixedStepSeconds);
     const husk = standHusk(siege.world, 6, 1);
 
-    dealDamage(husk, { amount: 10, source: hero });
+    dealDamage(requireAuthority(siege.world), husk, {
+        amount: 10,
+        source: hero,
+    });
     siege.step(fixedStepSeconds);
 
     expect(husk.isAlive()).toBe(false);
     expect(hero.get(WardenTrait)?.kills).toBe(1);
-    const coins = siege.world.query(CoinTrait);
-    expect(coins.length).toBeGreaterThan(0);
-    for (const coin of coins)
-        expect(coin.get(Transform)?.distanceTo(onField(0, -6))).toBeLessThan(
-            1.5,
-        );
+    expect(hero.get(WalletTrait)?.coins).toBe(
+        monsterSettings[MonsterKind.Husk].coins,
+    );
+    const bursts = siege.world
+        .queryFirst(CoinBurstsTrait)
+        ?.get(CoinBurstsTrait)?.bursts;
+    expect(bursts).toHaveLength(1);
+    const from = new Vector3(bursts?.[0].x, bursts?.[0].y, bursts?.[0].z);
+    expect(from.distanceTo(onField(0, -6))).toBeLessThan(0.1);
 });
 
-it("drops the coins of a monster no warden's shot killed, and credits no one", async () => {
+it("pays the coins of a monster no warden's shot killed all the same, and credits no one the kill", async () => {
     siege = await openSiege();
     const hero = joinWarden(siege, { name: "Ada", position: onField() });
     siege.step(fixedStepSeconds);
     const husk = standHusk(siege.world, 6, 1);
 
-    dealDamage(husk, { amount: 10 });
+    dealDamage(requireAuthority(siege.world), husk, { amount: 10 });
     siege.step(fixedStepSeconds);
 
     expect(husk.isAlive()).toBe(false);
     expect(hero.get(WardenTrait)?.kills).toBe(0);
-    expect(siege.world.query(CoinTrait).length).toBeGreaterThan(0);
-});
-
-it("puts a coin into the wallet of the warden who walks over it", async () => {
-    siege = await openSiege();
-    const hero = joinWarden(siege, { name: "Ada", position: onField() });
-    siege.step(fixedStepSeconds);
-    const husk = standHusk(siege.world, 2, 1);
-
-    dealDamage(husk, { amount: 10, source: hero });
-    //  Its coin drops two metres off, inside the pull toward her.
-    siege.step(2);
-
-    expect(husk.isAlive()).toBe(false);
-    expect(siege.world.query(CoinTrait)).toHaveLength(0);
-    expect(hero.get(Wallet)?.coins).toBe(
+    expect(hero.get(WalletTrait)?.coins).toBe(
         monsterSettings[MonsterKind.Husk].coins,
     );
 });

@@ -6,10 +6,21 @@ import type {
     World,
 } from "koota";
 import { Vector3, type Object3D } from "three";
-import type { Save } from "@spawnite/schema";
+import type { SavedHero } from "@spawnite/schema";
 import { yawToQuaternion } from "@spawnite/engine";
-import { HealthTrait, Hero, Path, Pose, Steer } from "@spawnite/engine";
-import { Facing, Ref, Transform, Velocity } from "@spawnite/engine";
+import {
+    HealthTrait,
+    HeroTrait,
+    PathTrait,
+    PoseTrait,
+    SteerTrait,
+} from "@spawnite/engine";
+import {
+    FacingTrait,
+    RefTrait,
+    TransformTrait,
+    VelocityTrait,
+} from "@spawnite/engine";
 
 //  The hero `spawnHero` builds, with every field defaulted, so a case names the
 //  one it turns on and a field the hero grows later lands here rather than in
@@ -57,20 +68,20 @@ export function heroBuilder(world?: World) {
             //  without this a second spawn shares the first hero's vectors, and
             //  a case that kept the vector it named would watch it move.
             const traits: ConfigurableTrait[] = [
-                Hero,
+                HeroTrait,
                 HealthTrait(health),
-                Pose,
-                Path,
-                Steer,
-                Transform(position.clone()),
-                Velocity(velocity.clone()),
-                Facing({ rotation: yawToQuaternion(yaw) }),
+                PoseTrait,
+                PathTrait,
+                SteerTrait,
+                TransformTrait(position.clone()),
+                VelocityTrait(velocity.clone()),
+                FacingTrait({ rotation: yawToQuaternion(yaw) }),
             ];
-            if (object) traits.push(Ref({ object }));
+            if (object) traits.push(RefTrait({ object }));
             if (!world) throw new Error("A hero needs a world to spawn into.");
             return world.spawn(...traits);
         },
-        toSave(): NonNullable<Save["hero"]> {
+        toSave(): SavedHero {
             return {
                 position: position.clone(),
                 facing: yaw,

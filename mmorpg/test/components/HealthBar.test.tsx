@@ -7,12 +7,11 @@ import { expect, it, vi } from "vitest";
 import { HealthTrait } from "@spawnite/engine";
 import { HealthBar } from "../../src/components/HealthBar";
 
-vi.mock("@react-three/drei", async (importOriginal) => ({
-    ...(await importOriginal<typeof import("@react-three/drei")>()),
-    Html: ({ children }: PropsWithChildren) => <div>{children}</div>,
-    //  The engine preloads the scatter kit when it is imported.
-    useGLTF: { preload: vi.fn() },
-}));
+vi.mock("@react-three/drei", async (importOriginal) =>
+    (await import("@spawnite/testing/fiber")).fakeDrei(importOriginal, {
+        Html: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    }),
+);
 
 it("subscribes to health and hides when the trait is absent", () => {
     const world = createGameWorld();

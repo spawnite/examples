@@ -4,17 +4,20 @@ import {
     AdditiveBlending,
     BufferAttribute,
     BufferGeometry,
+    MathUtils,
     ShaderMaterial,
 } from "three";
 import {
-    Ground,
+    GroundTrait,
     hashKeys,
     useHeadless,
     useWorldEntity,
 } from "@spawnite/engine";
+import { nightSky } from "../world/night";
 
 //  Fireflies over the grass between the stones and the forest: soft warm
-//  points that drift and blink, all of them one draw.
+//  points that drift and blink, all of them one draw, out from dusk until
+//  the sun comes up.
 
 const fireflyCount = 90;
 /** Metres from the middle they keep to: outside the stones, short of the
@@ -23,9 +26,14 @@ const band = { inner: 21, outer: 38 };
 /** Metres over the grass they hover. */
 const hover = { low: 0.3, high: 2 };
 
+/** The share of the night over which the fireflies go out: the sky
+ *  paling to the sun up. */
+const fireflyDawn = { from: 0.85, to: 1 };
+
 const vertexShader = /* glsl */ `
 uniform float uTime;
 uniform float uPixels;
+uniform float uAwake;
 attribute float aSeed;
 varying float vLight;
 void main() {
@@ -42,7 +50,7 @@ void main() {
     //  Far ones fade into the dusk rather than stay pin-sharp, and one
     //  that drifts past the camera fades out rather than fill the view.
     vLight = (0.22 + blink) * (1.0 - smoothstep(30.0, 55.0, distance))
-        * smoothstep(1.0, 3.0, distance);
+        * smoothstep(1.0, 3.0, distance) * uAwake;
     gl_PointSize = uPixels * (0.55 + blink * 0.45) / max(distance, 1.0);
     gl_Position = projectionMatrix * view;
 }`;
@@ -55,7 +63,11 @@ void main() {
     float halo = pow(max(1.0 - fromMiddle, 0.0), 1.4) * 0.35;
     //  Warm yellow-green short of full saturation, above 1 so it blooms.
     vec3 color = vec3(0.82, 1.0, 0.42) * 2.4;
-    gl_FragColor = vec4(color * (core + halo) * vLight, 1.0);
+    //  Alpha carries the light, up to 1, which additive blending scales the
+    //  colour by: a point's dark corners stay clear of the ambient
+    //  occlusion's transparency pass, which reads alpha 1 as a solid square.
+    float light = (core + halo) * vLight;
+    gl_FragColor = vec4(color * max(light, 1.0), min(light, 1.0));
 }`;
 
 /** The swarm, placed once on the map's ground. A page draws it; the room,
@@ -65,7 +77,7 @@ export function Fireflies() {
 }
 
 function Swarm() {
-    const surface = useWorldEntity().get(Ground)?.surface;
+    const surface = useWorldEntity().get(GroundTrait)?.surface;
     const geometry = useMemo(() => {
         const places = new Float32Array(fireflyCount * 3);
         const seeds = new Float32Array(fireflyCount);
@@ -92,7 +104,11 @@ function Swarm() {
             new ShaderMaterial({
                 vertexShader,
                 fragmentShader,
-                uniforms: { uTime: { value: 0 }, uPixels: { value: 1 } },
+                uniforms: {
+                    uTime: { value: 0 },
+                    uPixels: { value: 1 },
+                    uAwake: { value: 1 },
+                },
                 transparent: true,
                 blending: AdditiveBlending,
                 depthWrite: false,
@@ -103,6 +119,14 @@ function Swarm() {
     useLayoutEffect(() => () => material.dispose(), [material]);
     useFrame(({ clock, size, viewport }) => {
         material.uniforms.uTime.value = clock.elapsedTime;
+        //  Out through the night, gone as the sun comes up.
+        material.uniforms.uAwake.value =
+            1 -
+            MathUtils.smoothstep(
+                nightSky.night,
+                fireflyDawn.from,
+                fireflyDawn.to,
+            );
         //  About 0.25 m across on screen, whatever the canvas's height.
         material.uniforms.uPixels.value = size.height * viewport.dpr * 0.4;
     });

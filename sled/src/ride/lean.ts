@@ -1,9 +1,9 @@
 import { trait } from "koota";
 import { MathUtils } from "three";
 import {
+    defineBehaviour,
     RunContext,
     TrackMoverTrait,
-    type Behaviour,
     type System,
 } from "@spawnite/engine/core";
 
@@ -20,12 +20,13 @@ export const LeanTrait = trait({
     enabled: true,
 });
 
-export const LeanBehaviour: Behaviour<typeof LeanTrait> = {
+export const LeanBehaviour = defineBehaviour({
+    name: "lean",
     trait: LeanTrait,
-    source: "games/sled/src/ride/lean.ts",
+    source: "src/ride/lean.ts",
     description: "Rolls the rider into the steer.",
     runsOn: RunContext.Client,
-};
+});
 
 /** Eases each rider's roll toward its steer. Drawn only: the ride is the
  *  mover's. */

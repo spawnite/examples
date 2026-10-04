@@ -3,11 +3,11 @@ import type { Entity } from "koota";
 import { useTrait } from "koota/react";
 import {
     Bar,
-    Body,
+    BodyTrait,
     ChaseTrait,
     defaultWalkerBody,
     HealthTrait,
-    PlayerName,
+    PlayerNameTrait,
     Text,
     useEntity,
     useHeadless,
@@ -30,7 +30,7 @@ interface OverlayProps {
  *  health alone. A coin carries nothing, and nothing is drawn headless, as
  *  in the room. */
 export function Overlay({ entity }: OverlayProps) {
-    const player = useTrait(entity, PlayerName);
+    const player = useTrait(entity, PlayerNameTrait);
     const health = useTrait(entity, HealthTrait);
     const headless = useHeadless();
     //  Read once: the stream writes a new entity's traits in the delta that
@@ -40,7 +40,7 @@ export function Overlay({ entity }: OverlayProps) {
     //  A heroine's placeholder body is drawn at her Body's height.
     const height = monster
         ? monsterBarHeight
-        : (entity.get(Body) ?? defaultWalkerBody).height;
+        : (entity.get(BodyTrait) ?? defaultWalkerBody).height;
 
     return (
         <Html

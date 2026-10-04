@@ -7,18 +7,9 @@ import {
     type Texture,
 } from "three";
 import { TrackSurface, useKtx2 } from "@spawnite/engine";
-import ice from "@game/assets/textures/sled/ice.ktx2?url";
-import iceNormal from "@game/assets/textures/sled/ice-n.ktx2?url";
-import snow from "@game/assets/textures/sled/snow.ktx2?url";
-import snowNormal from "@game/assets/textures/sled/snow-n.ktx2?url";
-import { palette } from "../palette";
+import type { SledMap } from "../maps";
 import { TerrainMaterial } from "./TerrainMaterial";
 
-//  Roughness is all that parts snow from ice. Ice at 0.45 rather than
-//  near-mirror: a narrow lobe reflects the horizon, and the lane went the
-//  colour of the sky whenever the sky changed.
-const snowRoughness = 0.95;
-const iceRoughness = 0.45;
 //  The geometry carries the drift, so the tile's normal is only the fine
 //  wind grain the chase camera rakes across.
 const normalScale = new Vector2(0.1, 0.1);
@@ -34,17 +25,23 @@ function useTile(url: string, color: boolean): Texture {
     return texture;
 }
 
+interface SlopeProps {
+    geometry: BufferGeometry;
+    /** The map whose tiles and colours it is drawn in. */
+    map: SledMap;
+}
+
 /** The run's drawn surface: snow and ice, the fence and the hillside, and
  *  the land out to the horizon, in one mesh with a material per zone. It
  *  is the ground, so it takes the sun's shadows and casts none.
  *  ponytail: the old sled's snow shader adds a coarse second normal sample
  *  and a sparkle; a stock material until the run is judged up close. */
-export function Slope({ geometry }: { geometry: BufferGeometry }) {
+export function Slope({ geometry, map }: SlopeProps) {
     const tiles = {
-        snow: useTile(snow, true),
-        snowNormal: useTile(snowNormal, false),
-        ice: useTile(ice, true),
-        iceNormal: useTile(iceNormal, false),
+        snow: useTile(map.tiles.snow.color, true),
+        snowNormal: useTile(map.tiles.snow.normal, false),
+        ice: useTile(map.tiles.ice.color, true),
+        iceNormal: useTile(map.tiles.ice.normal, false),
     };
     return (
         <TrackSurface
@@ -55,9 +52,9 @@ export function Slope({ geometry }: { geometry: BufferGeometry }) {
                         map={tiles.snow}
                         normalMap={tiles.snowNormal}
                         normalScale={normalScale}
-                        roughness={snowRoughness}
-                        color={palette.snowAlbedo}
-                        emissive={palette.snowEmissive}
+                        roughness={map.tiles.snow.roughness}
+                        color={map.albedo}
+                        emissive={map.emissive}
                         vertexColors
                     />
                 ),
@@ -66,12 +63,12 @@ export function Slope({ geometry }: { geometry: BufferGeometry }) {
                         map={tiles.ice}
                         normalMap={tiles.iceNormal}
                         normalScale={normalScale}
-                        roughness={iceRoughness}
-                        color={palette.snowAlbedo}
+                        roughness={map.tiles.ice.roughness}
+                        color={map.albedo}
                         vertexColors
                     />
                 ),
-                terrain: <TerrainMaterial />,
+                terrain: <TerrainMaterial map={map} />,
             }}
         />
     );
