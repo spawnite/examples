@@ -48,6 +48,6 @@ Each release replaces every folder here whole, so a change made to them in this 
 
 ## License
 
-The code in this repository is MIT, as [LICENSE](LICENSE) says: copy it, change it and ship it. The `@spawnite` packages that the projects install from npm have a licence of their own: PolyForm Shield 1.0.0, with two added permissions.
+The code in this repository is MIT-0, as [LICENSE](LICENSE) says: copy it, change it and ship it, with no credit asked. The `@spawnite` packages that the projects install from npm have a licence of their own: the Spawnite License 1.0.
 
 The files under each game's `public/assets` are outside that grant. Each keeps its own licence, which `packages/assets/SOURCES.md` in the Spawnite engine's repository, daniel-zarinski/game-platform, records; daniel-zarinski/game-platform#1663 fills the rows it is missing.
